@@ -1,0 +1,14 @@
+name = "care-billing-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# ผูก D1 database เข้ากับ Worker (ตัวแปรในโค้ดคือ env.DB)
+[[d1_databases]]
+binding = "DB"
+database_name = "care-billing-db"
+database_id = "PASTE_YOUR_DATABASE_ID_HERE"
+
+# เสิร์ฟไฟล์หน้าเว็บ (public/index.html) ไปพร้อมกับ Worker เดียวกัน
+[assets]
+directory = "./public"
+binding = "ASSETS"

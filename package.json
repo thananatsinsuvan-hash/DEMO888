@@ -1,0 +1,15 @@
+{
+  "name": "care-billing-system",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute care-billing-db --file=./schema.sql",
+    "db:init:remote": "wrangler d1 execute care-billing-db --remote --file=./schema.sql",
+    "create-user": "node scripts/create-user.js"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}
