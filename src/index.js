@@ -62,6 +62,18 @@ export default {
         if (user.role !== "admin") return json({ error: "forbidden — เฉพาะผู้ดูแลระบบเท่านั้น" }, 403);
         return await handleUsers(request, env, url, user);
       }
+
+      if (url.pathname.startsWith("/api/cases/") && url.pathname.endsWith("/photo") && request.method === "POST") {
+        const user = await getUser(request, env);
+        if (!user) return json({ error: "unauthorized" }, 401);
+        return await handleUploadPhoto(request, env, url);
+      }
+
+      if (url.pathname.startsWith("/api/photo/") && request.method === "GET") {
+        const user = await getUser(request, env);
+        if (!user) return json({ error: "unauthorized" }, 401);
+        return await handleGetPhoto(request, env, url);
+      }
     } catch (err) {
       return json({ error: String(err && err.message ? err.message : err) }, 500);
     }
@@ -215,6 +227,46 @@ function generateSaltHex() {
   return generateHex(16);
 }
 
+/* ================= PATIENT PHOTOS (R2) ================= */
+
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5MB
+
+async function handleUploadPhoto(request, env, url) {
+  const parts = url.pathname.split("/").filter(Boolean); // ["api","cases",caseId,"photo"]
+  const caseId = parts[2];
+  if (!caseId) return json({ error: "ไม่พบรหัสเคส" }, 400);
+  if (!env.PHOTOS) return json({ error: "ยังไม่ได้ตั้งค่า R2 bucket สำหรับเก็บรูปภาพ (ดูคำแนะนำใน README)" }, 500);
+
+  const contentType = request.headers.get("Content-Type") || "";
+  if (!contentType.startsWith("image/")) return json({ error: "รองรับเฉพาะไฟล์รูปภาพเท่านั้น" }, 400);
+
+  const buf = await request.arrayBuffer();
+  if (buf.byteLength === 0) return json({ error: "ไฟล์รูปว่างเปล่า" }, 400);
+  if (buf.byteLength > MAX_PHOTO_BYTES) return json({ error: "ไฟล์รูปใหญ่เกินไป (จำกัด 5MB)" }, 400);
+
+  const ext = (contentType.split("/")[1] || "jpg").split("+")[0].replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
+  const key = `${caseId}-${Date.now()}.${ext}`;
+
+  await env.PHOTOS.put(key, buf, { httpMetadata: { contentType } });
+
+  return json({ ok: true, key });
+}
+
+async function handleGetPhoto(request, env, url) {
+  if (!env.PHOTOS) return json({ error: "ยังไม่ได้ตั้งค่า R2 bucket สำหรับเก็บรูปภาพ" }, 500);
+  const parts = url.pathname.split("/").filter(Boolean); // ["api","photo",key]
+  const key = decodeURIComponent(parts.slice(2).join("/") || "");
+  if (!key) return new Response("Not found", { status: 404 });
+
+  const obj = await env.PHOTOS.get(key);
+  if (!obj) return new Response("Not found", { status: 404 });
+
+  const headers = new Headers();
+  obj.writeHttpMetadata(headers);
+  headers.set("Cache-Control", "private, max-age=3600");
+  return new Response(obj.body, { headers });
+}
+
 /* ---- password hashing (PBKDF2-SHA256, ต้องตรงกับ scripts/create-user.js ) ---- */
 async function hashPassword(password, saltHex) {
   const enc = new TextEncoder();
@@ -281,6 +333,13 @@ const mapCase = (c) => ({
   bankName: c.bank_name || "",
   bankAcc: c.bank_acc || "",
   bankOwner: c.bank_owner || "",
+  age: c.age ?? null,
+  healthInfo: c.health_info || "",
+  allergy: c.allergy || "",
+  emergencyContact: c.emergency_contact || "",
+  emergencyPhone: c.emergency_phone || "",
+  admissionDate: c.admission_date || "",
+  photoKey: c.photo_key || "",
 });
 const mapPayment = (p) => ({
   paid: !!p.paid,
@@ -328,8 +387,14 @@ async function saveState(db, state) {
   for (const c of state.cases || []) {
     stmts.push(
       db
-        .prepare(`INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner) VALUES (?,?,?,?,?,?,?,?,?)`)
-        .bind(c.id, c.branchId || null, c.name, c.note || "", c.monthlyFee || 0, c.dueDay || 1, c.bankName || "", c.bankAcc || "", c.bankOwner || "")
+        .prepare(
+          `INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner,age,health_info,allergy,emergency_contact,emergency_phone,admission_date,photo_key)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+        )
+        .bind(
+          c.id, c.branchId || null, c.name, c.note || "", c.monthlyFee || 0, c.dueDay || 1, c.bankName || "", c.bankAcc || "", c.bankOwner || "",
+          c.age ?? null, c.healthInfo || "", c.allergy || "", c.emergencyContact || "", c.emergencyPhone || "", c.admissionDate || "", c.photoKey || ""
+        )
     );
   }
   for (const k of Object.keys(state.entries || {})) {
@@ -409,13 +474,19 @@ async function saveScopedState(db, state, user) {
   for (const c of scopedCases) {
     stmts.push(
       db.prepare(`
-        INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner)
-        VALUES (?,?,?,?,?,?,?,?,?)
+        INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner,age,health_info,allergy,emergency_contact,emergency_phone,admission_date,photo_key)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET
           branch_id=excluded.branch_id, name=excluded.name, note=excluded.note,
           monthly_fee=excluded.monthly_fee, due_day=excluded.due_day,
-          bank_name=excluded.bank_name, bank_acc=excluded.bank_acc, bank_owner=excluded.bank_owner
-      `).bind(c.id, branchId, c.name, c.note || "", c.monthlyFee || 0, c.dueDay || 1, c.bankName || "", c.bankAcc || "", c.bankOwner || "")
+          bank_name=excluded.bank_name, bank_acc=excluded.bank_acc, bank_owner=excluded.bank_owner,
+          age=excluded.age, health_info=excluded.health_info, allergy=excluded.allergy,
+          emergency_contact=excluded.emergency_contact, emergency_phone=excluded.emergency_phone,
+          admission_date=excluded.admission_date, photo_key=excluded.photo_key
+      `).bind(
+        c.id, branchId, c.name, c.note || "", c.monthlyFee || 0, c.dueDay || 1, c.bankName || "", c.bankAcc || "", c.bankOwner || "",
+        c.age ?? null, c.healthInfo || "", c.allergy || "", c.emergencyContact || "", c.emergencyPhone || "", c.admissionDate || "", c.photoKey || ""
+      )
     );
   }
 

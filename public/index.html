@@ -446,34 +446,71 @@
 
 <!-- CASE FORM MODAL -->
 <div class="overlay" id="overlay-case">
-  <div class="modal">
+  <div class="modal wide">
     <div class="modal-head">
       <h3 id="case-modal-title">เพิ่มเคสใหม่</h3>
       <button class="modal-close" data-close="overlay-case">&times;</button>
     </div>
     <input type="hidden" id="case-id">
+
+    <div class="field" style="text-align:center;">
+      <div id="case-photo-preview" style="width:88px;height:88px;border-radius:50%;background:var(--pine-tint);margin:0 auto 8px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:12px;text-align:center;">ไม่มีรูป</div>
+      <input type="file" id="case-photo-file" accept="image/*" style="display:none;">
+      <input type="hidden" id="case-photo-key">
+      <button type="button" class="btn btn-sm" id="btn-upload-photo">เลือกรูปคนไข้</button>
+    </div>
+
     <div class="field">
       <label>ชื่อผู้สูงอายุ / ชื่อเคส</label>
       <input id="case-name" placeholder="เช่น คุณยายสมศรี ใจดี">
     </div>
-    <div class="field">
-      <label>สาขาที่ดูแลเคสนี้</label>
-      <select id="case-branch"><option value="">— ไม่ระบุสาขา —</option></select>
+    <div class="field-row">
+      <div class="field">
+        <label>สาขาที่ดูแลเคสนี้</label>
+        <select id="case-branch"><option value="">— ไม่ระบุสาขา —</option></select>
+      </div>
+      <div class="field">
+        <label>อายุ (ปี)</label>
+        <input id="case-age" type="number" min="0" max="130" placeholder="เช่น 78">
+      </div>
     </div>
     <div class="field">
       <label>หมายเหตุ (ผู้ดูแล / ที่อยู่ / ญาติผู้ติดต่อ)</label>
       <input id="case-note" placeholder="เช่น ลูกสาว คุณสมหญิง 08x-xxx-xxxx">
     </div>
+
+    <h3 style="font-size:14px;margin:18px 0 8px;">ประวัติเบื้องต้น</h3>
+    <div class="field">
+      <label>โรคประจำตัว / ข้อมูลสุขภาพสำคัญ</label>
+      <input id="case-health-info" placeholder="เช่น เบาหวาน, ความดันโลหิตสูง">
+    </div>
+    <div class="field">
+      <label>ยาที่แพ้</label>
+      <input id="case-allergy" placeholder="เช่น เพนิซิลลิน">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>ผู้ติดต่อฉุกเฉิน</label>
+        <input id="case-emergency-contact" placeholder="ชื่อ-นามสกุล">
+      </div>
+      <div class="field">
+        <label>เบอร์โทรผู้ติดต่อฉุกเฉิน</label>
+        <input id="case-emergency-phone" placeholder="08x-xxx-xxxx">
+      </div>
+    </div>
+
+    <h3 style="font-size:14px;margin:18px 0 8px;">ค่าบริการและการชำระเงิน</h3>
     <div class="field-row">
       <div class="field">
         <label>ค่าบริการรายเดือน (บาท)</label>
         <input id="case-fee" type="number" min="0" step="1" placeholder="15000">
       </div>
       <div class="field">
-        <label>วันครบกำหนดชำระของทุกเดือน</label>
-        <input id="case-dueday" type="number" min="1" max="28" placeholder="5">
+        <label>วันที่เข้ารับบริการ</label>
+        <input id="case-admission-date" type="date">
       </div>
     </div>
+    <p style="font-size:12px;color:var(--ink-soft);margin:-8px 0 14px;">ระบบจะคำนวณวันครบกำหนดชำระของทุกเดือนจากวันที่ในช่องนี้โดยอัตโนมัติ</p>
     <div class="field">
       <label>ธนาคาร</label>
       <input id="case-bankname" placeholder="เช่น ธนาคารกสิกรไทย">
@@ -1075,16 +1112,21 @@ function renderCases(){
   container.innerHTML = `<div class="grid">${filtered.map(c=>`
     <div class="case-card">
       <div class="case-top">
-        <div class="avatar" style="background:${colorFor(c.id)}">${initials(c.name).toUpperCase()}</div>
+        ${c.photoKey
+          ? `<img class="avatar" style="object-fit:cover;" src="/api/photo/${encodeURIComponent(c.photoKey)}">`
+          : `<div class="avatar" style="background:${colorFor(c.id)}">${initials(c.name).toUpperCase()}</div>`}
         <div>
-          <p class="case-name">${escapeHtml(c.name)}</p>
+          <p class="case-name">${escapeHtml(c.name)}${c.age ? ` <span style="font-weight:400;color:var(--ink-soft);font-size:12.5px;">(อายุ ${c.age} ปี)</span>` : ''}</p>
           <p class="case-note">${escapeHtml(c.note || '—')}</p>
         </div>
       </div>
       <div class="case-meta">
         ${c.branchId ? `<div>สาขา &nbsp;<b>${escapeHtml(branchName(c.branchId))}</b>${orgOfBranch(c.branchId) ? ' <span style="color:var(--ink-faint);">('+escapeHtml(orgOfBranch(c.branchId))+')</span>' : ''}</div>` : ''}
+        ${c.admissionDate ? `<div>วันที่เข้ารับบริการ &nbsp;<b>${new Date(c.admissionDate+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'})}</b></div>` : ''}
+        ${c.healthInfo ? `<div>โรคประจำตัว &nbsp;<b>${escapeHtml(c.healthInfo)}</b></div>` : ''}
+        ${c.allergy ? `<div>แพ้ยา &nbsp;<b>${escapeHtml(c.allergy)}</b></div>` : ''}
         <div>ค่าบริการรายเดือน &nbsp;<b>${thb(c.monthlyFee)}</b></div>
-        <div>ครบกำหนดทุกวันที่ &nbsp;<b>${c.dueDay}</b></div>
+        <div>ครบกำหนดชำระทุกวันที่ &nbsp;<b>${c.dueDay}</b></div>
         <div>บัญชีรับเงิน &nbsp;<b>${escapeHtml(c.bankName || '—')} ${c.bankAcc ? '· '+escapeHtml(c.bankAcc):''}</b></div>
       </div>
       <div class="case-actions">
@@ -1131,18 +1173,58 @@ function populateCaseBranchSelect(selected){
   sel.value = selected || '';
 }
 
+function showCasePhotoPreview(key){
+  const box = document.getElementById('case-photo-preview');
+  if(key){
+    box.innerHTML = `<img src="/api/photo/${encodeURIComponent(key)}" style="width:100%;height:100%;object-fit:cover;">`;
+  } else {
+    box.innerHTML = 'ไม่มีรูป';
+  }
+}
+
+document.getElementById('btn-upload-photo').addEventListener('click', ()=>{
+  document.getElementById('case-photo-file').click();
+});
+document.getElementById('case-photo-file').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ alert('กรุณาเลือกไฟล์รูปภาพ'); return; }
+  if(file.size > 5*1024*1024){ alert('ไฟล์รูปใหญ่เกินไป (จำกัด 5MB)'); return; }
+  const caseId = document.getElementById('case-id').value;
+  try{
+    const res = await fetch('/api/cases/'+encodeURIComponent(caseId)+'/photo', {
+      method: 'POST',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok){ alert(body.error || 'อัปโหลดรูปไม่สำเร็จ'); return; }
+    document.getElementById('case-photo-key').value = body.key;
+    showCasePhotoPreview(body.key);
+  }catch(err){ alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ อัปโหลดรูปไม่สำเร็จ'); }
+});
+
 function openCaseForm(caseId, defaultBranchId){
   const c = state.cases.find(x=>x.id===caseId);
   document.getElementById('case-modal-title').textContent = c ? 'แก้ไขข้อมูลเคส' : 'เพิ่มเคสใหม่';
-  document.getElementById('case-id').value = c ? c.id : '';
+  // สร้าง id ล่วงหน้าเสมอ (แม้เคสใหม่) เพื่อให้อัปโหลดรูปได้ก่อนกดบันทึก
+  document.getElementById('case-id').value = c ? c.id : uid();
   document.getElementById('case-name').value = c ? c.name : '';
   populateCaseBranchSelect(c ? c.branchId : (defaultBranchId || ''));
+  document.getElementById('case-age').value = c ? (c.age ?? '') : '';
   document.getElementById('case-note').value = c ? (c.note||'') : '';
+  document.getElementById('case-health-info').value = c ? (c.healthInfo||'') : '';
+  document.getElementById('case-allergy').value = c ? (c.allergy||'') : '';
+  document.getElementById('case-emergency-contact').value = c ? (c.emergencyContact||'') : '';
+  document.getElementById('case-emergency-phone').value = c ? (c.emergencyPhone||'') : '';
   document.getElementById('case-fee').value = c ? c.monthlyFee : '';
-  document.getElementById('case-dueday').value = c ? c.dueDay : '';
+  document.getElementById('case-admission-date').value = c ? (c.admissionDate||'') : '';
   document.getElementById('case-bankname').value = c ? (c.bankName||'') : '';
   document.getElementById('case-bankacc').value = c ? (c.bankAcc||'') : '';
   document.getElementById('case-bankname-owner').value = c ? (c.bankOwner||'') : '';
+  document.getElementById('case-photo-key').value = c ? (c.photoKey||'') : '';
+  showCasePhotoPreview(c ? c.photoKey : '');
   document.getElementById('btn-delete-case').style.display = c ? 'inline-flex' : 'none';
   openOverlay('overlay-case');
 }
@@ -1151,19 +1233,29 @@ document.getElementById('btn-save-case').addEventListener('click', async ()=>{
   const id = document.getElementById('case-id').value;
   const name = document.getElementById('case-name').value.trim();
   if(!name){ alert('กรุณากรอกชื่อเคส'); return; }
+  const admissionDate = document.getElementById('case-admission-date').value;
+  if(!admissionDate){ alert('กรุณาระบุวันที่เข้ารับบริการ'); return; }
+  const dueDay = Math.min(28, Math.max(1, new Date(admissionDate+'T00:00:00').getDate()));
   const data = {
-    id: id || uid(),
+    id,
     name,
     branchId: document.getElementById('case-branch').value,
+    age: Number(document.getElementById('case-age').value) || null,
     note: document.getElementById('case-note').value.trim(),
+    healthInfo: document.getElementById('case-health-info').value.trim(),
+    allergy: document.getElementById('case-allergy').value.trim(),
+    emergencyContact: document.getElementById('case-emergency-contact').value.trim(),
+    emergencyPhone: document.getElementById('case-emergency-phone').value.trim(),
     monthlyFee: Number(document.getElementById('case-fee').value) || 0,
-    dueDay: Math.min(28, Math.max(1, Number(document.getElementById('case-dueday').value) || 1)),
+    admissionDate,
+    dueDay,
     bankName: document.getElementById('case-bankname').value.trim(),
     bankAcc: document.getElementById('case-bankacc').value.trim(),
     bankOwner: document.getElementById('case-bankname-owner').value.trim(),
+    photoKey: document.getElementById('case-photo-key').value,
   };
-  if(id){
-    const idx = state.cases.findIndex(x=>x.id===id);
+  const idx = state.cases.findIndex(x=>x.id===id);
+  if(idx >= 0){
     state.cases[idx] = data;
   } else {
     state.cases.push(data);

@@ -25,7 +25,15 @@ CREATE TABLE IF NOT EXISTS cases (
   due_day      INTEGER NOT NULL DEFAULT 1,
   bank_name    TEXT,
   bank_acc     TEXT,
-  bank_owner   TEXT
+  bank_owner   TEXT,
+  -- ข้อมูลประวัติเบื้องต้น
+  age               INTEGER,
+  health_info       TEXT,   -- โรคประจำตัว / ข้อมูลสุขภาพสำคัญ
+  allergy           TEXT,   -- ยาที่แพ้
+  emergency_contact TEXT,   -- ชื่อผู้ติดต่อฉุกเฉิน
+  emergency_phone   TEXT,   -- เบอร์โทรผู้ติดต่อฉุกเฉิน
+  admission_date    TEXT,   -- วันที่เข้ารับบริการ (YYYY-MM-DD) — ใช้คำนวณ due_day อัตโนมัติ
+  photo_key         TEXT    -- key ของรูปคนไข้ใน R2 bucket
 );
 
 CREATE TABLE IF NOT EXISTS entries (
