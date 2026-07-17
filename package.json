@@ -8,9 +8,16 @@
     "db:init": "wrangler d1 execute care-billing-db --file=./schema.sql",
     "db:init:remote": "wrangler d1 execute care-billing-db --remote --file=./schema.sql",
     "db:migrate:002": "wrangler d1 execute care-billing-db --remote --file=./migrations/002_case_details.sql",
+    "db:migrate:003": "wrangler d1 execute care-billing-db --remote --file=./migrations/003_billing_upgrade.sql",
+    "db:migrate:004": "wrangler d1 execute care-billing-db --remote --file=./migrations/004_fee_toggle.sql",
+    "db:migrate:005": "wrangler d1 execute care-billing-db --remote --file=./migrations/005_adhoc_bills.sql",
+    "db:migrate:006": "wrangler d1 execute care-billing-db --remote --file=./migrations/006_manager_role.sql",
+    "db:migrate:007": "wrangler d1 execute care-billing-db --remote --file=./migrations/007_doc_numbering.sql",
+    "db:migrate:008": "wrangler d1 execute care-billing-db --remote --file=./migrations/008_case_moveout.sql",
+    "db:migrate:009": "wrangler d1 execute care-billing-db --remote --file=./migrations/009_appointments.sql",
     "create-user": "node scripts/create-user.js"
   },
   "devDependencies": {
-    "wrangler": "^3.90.0"
+    "wrangler": "^4.94.0"
   }
 }

@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ระบบบันทึกค่าใช้จ่ายผู้สูงอายุ</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#20453B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="บันทึกค่าดูแล">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=Noto+Serif+Thai:wght@500;600;700&display=swap" rel="stylesheet">
@@ -141,6 +149,17 @@
   }
   .empty .big{font-size:15px;color:var(--ink);font-weight:500;margin-bottom:4px;}
 
+  /* Due banner (admin) */
+  .due-banner{
+    display:flex;align-items:center;gap:12px;background:var(--rust-tint);border:0.5px solid #E0B6A6;
+    color:#8C3A26;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:13.5px;
+  }
+  .due-banner b{font-weight:600;}
+  .due-banner .due-banner-close{
+    margin-left:auto;background:none;border:none;color:#8C3A26;cursor:pointer;font-size:18px;line-height:1;padding:2px 4px;
+  }
+  .due-banner a.due-banner-link{color:#8C3A26;text-decoration:underline;cursor:pointer;font-weight:500;}
+
   /* Toolbar */
   .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap;}
   .toolbar select, .toolbar input[type=month]{width:auto;min-width:170px;}
@@ -160,6 +179,19 @@
   .tag-paid{background:var(--moss-tint);color:#245536;}
   .tag-due{background:var(--gold-tint);color:#7A5A22;}
   .tag-overdue{background:var(--rust-tint);color:#8C3A26;}
+  .tag-appt{background:#E4E9F7;color:#2E4C8C;}
+  .tag-appt-cancelled{background:#EDEBE6;color:#918C7F;text-decoration:line-through;}
+
+  /* Calendar view */
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cal-dow{font-size:12px;font-weight:600;color:var(--ink-soft);text-align:center;padding:4px 0;}
+  .cal-cell{min-height:92px;border:1px solid var(--line-strong,#E4E1D8);border-radius:8px;padding:6px;background:#fff;display:flex;flex-direction:column;gap:4px;}
+  .cal-cell.empty{background:transparent;border:none;}
+  .cal-cell.today{border-color:var(--pine-dark,#20453B);border-width:2px;}
+  .cal-daynum{font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .cal-case-chip{display:block;font-size:11px;padding:2px 6px;border-radius:6px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+  .cal-appt-chip{display:block;font-size:11px;padding:2px 6px;border-radius:6px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:#E4E9F7;color:#2E4C8C;}
+  .cal-appt-chip.cancelled{background:#EDEBE6;color:#918C7F;text-decoration:line-through;}
 
   /* Entries view */
   .entry-panel{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;}
@@ -271,11 +303,28 @@
   .lh-sign-name{font-weight:500;}
   .lh-sign-role{color:var(--ink-soft);font-size:12px;margin-top:2px;}
 
+  @page{ size: A4; margin: 12mm; }
   @media print{
     body *{visibility:hidden;}
     #print-area, #print-area *{visibility:visible;}
-    #print-area{position:absolute;top:0;left:0;width:100%;padding:0;}
-    .doc-modal{box-shadow:none;}
+    #print-area{
+      position:absolute;top:0;left:0;width:100%;padding:0;
+      font-size:12px;transform-origin:top left;
+    }
+    .doc-modal{box-shadow:none;max-width:none;}
+    .lh-top{margin-bottom:2px;}
+    .lh-logo{width:56px;height:56px;}
+    .lh-logo .mark{font-size:14px;}
+    .lh-info{margin:8px 0 8px;font-size:11.5px;}
+    .lh-title-bar{padding:6px;font-size:13px;margin-bottom:10px;}
+    .lh-table td, .lh-table th{padding:5px 10px;height:18px;font-size:11.5px;}
+    .lh-foot-row td{padding:5px 10px;font-size:11px;}
+    .lh-note{margin:10px 0 20px;font-size:11px;}
+    .lh-sign{margin-top:26px !important;}
+    .lh-sign-box{font-size:11.5px;}
+    .lh-sign-line{height:32px;}
+    .lh-highlight-note{padding:7px 12px;font-size:11.5px;margin-top:8px;}
+    .doc-bank{padding:9px 12px;font-size:11.5px;margin-top:8px;}
   }
 
   @media (max-width:820px){
@@ -321,7 +370,10 @@
     </div>
     <button class="nav-btn active" data-view="cases"><span class="nav-dot"></span>รายชื่อเคส</button>
     <button class="nav-btn" data-view="entries"><span class="nav-dot"></span>บันทึกค่าใช้จ่าย</button>
-    <button class="nav-btn" data-view="summary"><span class="nav-dot"></span>สรุปรายเดือน</button>
+    <button class="nav-btn" data-view="bills"><span class="nav-dot"></span>บิลค้างชำระ</button>
+    <button class="nav-btn" id="nav-calendar" data-view="calendar"><span class="nav-dot"></span>ปฏิทินครบกำหนด</button>
+    <button class="nav-btn" id="nav-summary" data-view="summary" data-manager-up><span class="nav-dot"></span>สรุปรายเดือน</button>
+    <button class="nav-btn" id="nav-docs-summary" data-view="docs-summary" data-manager-up><span class="nav-dot"></span>สรุปเอกสาร</button>
     <button class="nav-btn" id="nav-settings" data-view="settings" data-admin-only><span class="nav-dot"></span>ตั้งค่าเอกสาร</button>
     <button class="nav-btn" id="nav-users" data-view="users" data-admin-only><span class="nav-dot"></span>จัดการผู้ใช้</button>
     <div class="sidebar-foot" id="sidebar-user-box">
@@ -333,14 +385,20 @@
 
   <main class="main">
 
+    <div id="due-banner" class="due-banner" style="display:none;"></div>
+    <div id="appt-banner" class="due-banner" style="display:none;"></div>
+
     <!-- CASES VIEW -->
     <section class="view active" id="view-cases">
       <div class="page-head">
         <div>
-          <h2>รายชื่อเคส</h2>
-          <div class="sub">เลือกองค์กร &gt; สาขา ก่อน แล้วเพิ่มรายชื่อเคสในสาขานั้น</div>
+          <h2 id="cases-view-title">รายชื่อเคส</h2>
+          <div class="sub" id="cases-view-sub">เลือกองค์กร &gt; สาขา ก่อน แล้วเพิ่มรายชื่อเคสในสาขานั้น</div>
         </div>
-        <button class="btn btn-primary" id="btn-add-case"><i>+</i> เพิ่มเคสใหม่</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm" id="btn-toggle-archive">คลังเก็บถาวร (เคสย้ายออก)</button>
+          <button class="btn btn-primary" id="btn-add-case"><i>+</i> เพิ่มเคสใหม่</button>
+        </div>
       </div>
       <div class="toolbar" style="align-items:flex-end;">
         <div class="field" style="margin-bottom:0;min-width:170px;">
@@ -384,6 +442,44 @@
       <div id="entries-body"></div>
     </section>
 
+    <!-- BILLS VIEW (บิลค้างชำระ — ใช้งานหลักโดย staff) -->
+    <section class="view" id="view-bills">
+      <div class="page-head">
+        <div>
+          <h2>บิลค้างชำระ</h2>
+          <div class="sub">รายการบิลที่ยังไม่ได้ชำระของสาขานี้ (รวมทั้งบิลรายเดือนของเดือนที่เลือก และบิลพิเศษระหว่างเดือนที่ยังค้างอยู่ทุกรายการ) — ยืนยันการชำระพร้อมแนบรูปสลิป/หลักฐานรับเงินได้ที่นี่</div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <input type="month" id="bills-month-select">
+        <select id="bills-branch-filter"><option value="">— ทุกสาขา —</option></select>
+      </div>
+      <div id="bills-body"></div>
+    </section>
+
+    <!-- CALENDAR VIEW -->
+    <section class="view" id="view-calendar">
+      <div class="page-head">
+        <div>
+          <h2>ปฏิทินครบกำหนดชำระ</h2>
+          <div class="sub">ภาพรวมวันครบกำหนดชำระและนัดหมอของแต่ละเคสในเดือนที่เลือก ตามสาขาที่คุณมีสิทธิ์เข้าถึง</div>
+        </div>
+        <button class="btn btn-primary" id="btn-add-appointment"><i>+</i> เพิ่มนัดหมอ</button>
+      </div>
+      <div class="toolbar">
+        <input type="month" id="calendar-month-select">
+        <select id="calendar-branch-filter"><option value="">— ทุกสาขา —</option></select>
+      </div>
+      <div style="display:flex;gap:14px;margin-bottom:12px;font-size:12px;color:var(--ink-soft);align-items:center;flex-wrap:wrap;">
+        <span><span class="tag tag-due">●</span> รอชำระ</span>
+        <span><span class="tag tag-overdue">●</span> เกินกำหนด</span>
+        <span><span class="tag tag-paid">●</span> ชำระแล้ว</span>
+        <span><span class="tag tag-appt">🩺</span> นัดหมอ</span>
+        <span><span class="tag tag-appt-cancelled">🩺</span> นัดที่ยกเลิกแล้ว</span>
+      </div>
+      <div id="calendar-body"></div>
+    </section>
+
     <!-- SUMMARY VIEW -->
     <section class="view" id="view-summary">
       <div class="page-head">
@@ -394,8 +490,24 @@
       </div>
       <div class="toolbar">
         <input type="month" id="summary-month-select">
+        <select id="summary-branch-filter"><option value="">— ทุกสาขา —</option></select>
       </div>
       <div id="summary-body"></div>
+    </section>
+
+    <!-- DOCS SUMMARY VIEW -->
+    <section class="view" id="view-docs-summary">
+      <div class="page-head">
+        <div>
+          <h2>สรุปเอกสาร</h2>
+          <div class="sub">รวมรายการใบแจ้งยอด/ใบเสร็จที่ออกเลขที่เอกสารแล้วของสาขาที่เลือก ในเดือนนั้นๆ — ใบแจ้งยอดอิงตามรอบบิล/วันที่ออกบิล ส่วนใบเสร็จอิงตามวันที่ชำระจริง</div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <input type="month" id="docs-summary-month">
+        <select id="docs-summary-branch-filter"><option value="">— ทุกสาขา —</option></select>
+      </div>
+      <div id="docs-summary-body"></div>
     </section>
 
     <!-- SETTINGS VIEW -->
@@ -432,7 +544,7 @@
       <div class="page-head">
         <div>
           <h2>จัดการผู้ใช้</h2>
-          <div class="sub">เพิ่ม/ลบผู้ใช้ และรีเซ็ตรหัสผ่าน — staff จะเห็นเฉพาะสาขาที่ผูกไว้เท่านั้น</div>
+          <div class="sub">เพิ่ม/ลบผู้ใช้ และรีเซ็ตรหัสผ่าน — staff/manager เห็นเฉพาะสาขาที่ admin อนุญาต (เลือกได้หลายสาขา) กด "จัดการสิทธิ์" เพื่อแก้ไขภายหลังได้</div>
         </div>
         <button class="btn btn-primary" id="btn-add-user"><i>+</i> เพิ่มผู้ใช้</button>
       </div>
@@ -512,18 +624,9 @@
     </div>
     <p style="font-size:12px;color:var(--ink-soft);margin:-8px 0 14px;">ระบบจะคำนวณวันครบกำหนดชำระของทุกเดือนจากวันที่ในช่องนี้โดยอัตโนมัติ</p>
     <div class="field">
-      <label>ธนาคาร</label>
-      <input id="case-bankname" placeholder="เช่น ธนาคารกสิกรไทย">
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>เลขที่บัญชี</label>
-        <input id="case-bankacc" placeholder="xxx-x-xxxxx-x">
-      </div>
-      <div class="field">
-        <label>ชื่อบัญชี</label>
-        <input id="case-bankname-owner" placeholder="ชื่อผู้รับเงิน">
-      </div>
+      <label>บัญชีธนาคารที่ใช้เรียกเก็บเงินเคสนี้</label>
+      <select id="case-bank-account"><option value="">— เลือกบัญชีธนาคาร —</option></select>
+      <p style="font-size:12px;color:var(--ink-soft);margin:6px 0 0;" id="case-bank-hint">ยังไม่มีบัญชีธนาคารในสาขานี้ — เพิ่มได้ที่แท็บ "ตั้งค่าเอกสาร" &gt; แก้ไขสาขา</p>
     </div>
     <div class="modal-foot">
       <button class="btn btn-danger" id="btn-delete-case" style="margin-right:auto;display:none;">ลบเคสนี้</button>
@@ -541,12 +644,18 @@
       <button class="modal-close" data-close="overlay-org">&times;</button>
     </div>
     <input type="hidden" id="org-id">
+    <div class="field" style="text-align:center;">
+      <div id="org-logo-preview" style="width:78px;height:78px;border-radius:50%;background:var(--pine-tint);margin:0 auto 8px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:12px;text-align:center;">ไม่มีโลโก้</div>
+      <input type="file" id="org-logo-file" accept="image/*" style="display:none;">
+      <input type="hidden" id="org-logo-key">
+      <button type="button" class="btn btn-sm" id="btn-upload-logo">อัปโหลดโลโก้</button>
+    </div>
     <div class="field">
       <label>ชื่อองค์กร / ศูนย์</label>
       <input id="org-name" placeholder="เช่น ศูนย์ดูแลผู้สูงอายุ มาสุ เนอร์สซิ่ง โฮม">
     </div>
     <div class="field">
-      <label>ชื่อย่อโลโก้ (2-4 ตัวอักษร)</label>
+      <label>ชื่อย่อโลโก้ (2-4 ตัวอักษร) — ใช้แสดงกรณียังไม่ได้อัปโหลดรูปโลโก้</label>
       <input id="org-logo" placeholder="เช่น MASU">
     </div>
     <div class="field">
@@ -589,6 +698,25 @@
       <label>เบอร์โทรศัพท์สาขา</label>
       <input id="branch-phone" placeholder="เช่น 091-299-1644">
     </div>
+    <div class="field">
+      <label>รหัสสาขา (สำหรับเลขที่เอกสาร เช่น ใบแจ้งยอด/ใบเสร็จ)</label>
+      <input id="branch-code" placeholder="เช่น NW, BKK1 — ถ้าไม่ระบุระบบจะตั้งให้อัตโนมัติ">
+      <p style="font-size:12px;color:var(--ink-soft);margin:6px 0 0;">เลขที่เอกสารจะรันแยกตามสาขานี้ เช่น INV-NW-2569-0001 (รีเซ็ตเป็น 0001 ทุกต้นปี)</p>
+    </div>
+
+    <div id="branch-bank-section" style="display:none;">
+      <h3 style="font-size:14px;margin:18px 0 8px;">บัญชีธนาคารของสาขา</h3>
+      <p style="font-size:12px;color:var(--ink-soft);margin:-4px 0 10px;">เพิ่มไว้ได้หลายบัญชี — staff จะเลือกได้ตอนเพิ่ม/แก้ไขเคส</p>
+      <div id="branch-bank-list"></div>
+      <div class="add-entry-form" style="margin-top:10px;">
+        <input type="text" id="new-bank-name" placeholder="ธนาคาร">
+        <input type="text" id="new-bank-acc" placeholder="เลขที่บัญชี">
+        <input type="text" id="new-bank-owner" placeholder="ชื่อบัญชี">
+        <button class="btn btn-sm" id="btn-add-bank-account">+ เพิ่มบัญชี</button>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;">บันทึกสาขาก่อน จึงจะเพิ่มบัญชีธนาคารได้</p>
+    </div>
+
     <div class="modal-foot">
       <button class="btn btn-danger" id="btn-delete-branch" style="margin-right:auto;display:none;">ลบสาขานี้</button>
       <button class="btn" data-close="overlay-branch">ยกเลิก</button>
@@ -620,7 +748,8 @@
     <div class="field">
       <label>บทบาท</label>
       <select id="user-role">
-        <option value="staff">staff — เห็นเฉพาะสาขาที่ผูกไว้</option>
+        <option value="staff">staff — เข้าถึงได้เฉพาะสาขาที่ admin อนุญาต (เลือกได้หลายสาขา)</option>
+        <option value="manager">manager — เห็นเฉพาะสาขาที่ admin อนุญาต (เลือกได้หลายสาขา)</option>
         <option value="admin">admin — เข้าถึงได้ทุกองค์กร/สาขา</option>
       </select>
     </div>
@@ -634,9 +763,36 @@
         <select id="user-branch"></select>
       </div>
     </div>
+    <div id="user-manager-branches-fields" style="display:none;">
+      <div class="field">
+        <label>สาขาที่เข้าถึงได้ (เลือกได้หลายสาขา)</label>
+        <div id="user-manager-branches-list" style="max-height:220px;overflow:auto;border:1px solid var(--line,#ddd);border-radius:8px;padding:8px;"></div>
+      </div>
+    </div>
     <div class="modal-foot">
       <button class="btn" data-close="overlay-user">ยกเลิก</button>
       <button class="btn btn-primary" id="btn-save-user">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGER ACCESS MODAL -->
+<div class="overlay" id="overlay-manager-access">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>จัดการสิทธิ์เข้าถึงสาขา</h3>
+      <button class="modal-close" data-close="overlay-manager-access">&times;</button>
+    </div>
+    <input type="hidden" id="access-user-id">
+    <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 10px;" id="access-user-label"></p>
+    <div class="user-form-error" id="access-form-error" style="display:none;color:#B3261E;font-size:12.5px;margin-bottom:8px;"></div>
+    <div class="field">
+      <label>สาขาที่เข้าถึงได้ (เลือกได้หลายสาขา)</label>
+      <div id="access-branches-list" style="max-height:260px;overflow:auto;border:1px solid var(--line,#ddd);border-radius:8px;padding:8px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close="overlay-manager-access">ยกเลิก</button>
+      <button class="btn btn-primary" id="btn-save-manager-access">บันทึก</button>
     </div>
   </div>
 </div>
@@ -657,6 +813,37 @@
     <div class="modal-foot">
       <button class="btn" data-close="overlay-reset-pw">ยกเลิก</button>
       <button class="btn btn-primary" id="btn-save-reset-pw">บันทึกรหัสผ่านใหม่</button>
+    </div>
+  </div>
+</div>
+
+<!-- APPOINTMENT (นัดหมอ) MODAL -->
+<div class="overlay" id="overlay-appointment">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="appointment-modal-title">เพิ่มนัดหมอ</h3>
+      <button class="modal-close" data-close="overlay-appointment">&times;</button>
+    </div>
+    <input type="hidden" id="appointment-id">
+    <div class="user-form-error" id="appointment-form-error" style="display:none;color:#B3261E;font-size:12.5px;margin-bottom:8px;"></div>
+    <div class="field">
+      <label>เคส</label>
+      <select id="appointment-case"></select>
+    </div>
+    <div class="field">
+      <label>วันที่นัด</label>
+      <input type="date" id="appointment-date">
+    </div>
+    <div class="field">
+      <label>รายละเอียดนัด (ไม่บังคับ)</label>
+      <input type="text" id="appointment-note" placeholder="เช่น พบแพทย์ตรวจตา">
+    </div>
+    <p id="appointment-status-note" style="display:none;font-size:12.5px;color:var(--ink-soft);margin:-4px 0 10px;"></p>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="btn-delete-appointment" style="margin-right:auto;display:none;">ลบนัดนี้ถาวร</button>
+      <button class="btn" id="btn-toggle-cancel-appointment" style="display:none;"></button>
+      <button class="btn" data-close="overlay-appointment">ปิด</button>
+      <button class="btn btn-primary" id="btn-save-appointment">บันทึก</button>
     </div>
   </div>
 </div>
@@ -686,9 +873,108 @@
         <option>อื่นๆ</option>
       </select>
     </div>
+    <div class="field">
+      <label>ส่วนลด (บาท) — ถ้ามี จะแสดงในใบเสร็จ</label>
+      <input id="pay-discount" type="number" min="0" step="1" value="0">
+      <p id="pay-total-hint" style="font-size:12px;color:var(--ink-soft);margin:6px 0 0;"></p>
+    </div>
+    <div class="field" style="text-align:center;">
+      <label>รูปสลิปโอนเงิน / หลักฐานรับเงินสด</label>
+      <div id="pay-slip-preview" style="width:100%;max-height:160px;border-radius:8px;background:var(--pine-tint);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:12px;padding:14px;margin-bottom:8px;">ยังไม่มีรูป</div>
+      <input type="file" id="pay-slip-file" accept="image/*" style="display:none;">
+      <input type="hidden" id="pay-slip-key">
+      <button type="button" class="btn btn-sm" id="btn-upload-slip">แนบรูปสลิป</button>
+    </div>
     <div class="modal-foot">
       <button class="btn" data-close="overlay-pay">ยกเลิก</button>
       <button class="btn btn-primary" id="btn-save-pay">บันทึกการชำระเงิน</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADHOC BILL PAYMENT MODAL -->
+<div class="overlay" id="overlay-adhoc-pay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>ยืนยันการชำระ (บิลพิเศษ)</h3>
+      <button class="modal-close" data-close="overlay-adhoc-pay">&times;</button>
+    </div>
+    <input type="hidden" id="adhoc-pay-id">
+    <div class="field">
+      <label>วันที่ชำระ</label>
+      <input id="adhoc-pay-date" type="date">
+    </div>
+    <div class="field">
+      <label>จำนวนเงินที่ได้รับ (บาท)</label>
+      <input id="adhoc-pay-amount" type="number" min="0" step="1">
+    </div>
+    <div class="field">
+      <label>ช่องทางการชำระ</label>
+      <select id="adhoc-pay-method">
+        <option>โอนเงินผ่านธนาคาร</option>
+        <option>เงินสด</option>
+        <option>พร้อมเพย์</option>
+        <option>อื่นๆ</option>
+      </select>
+    </div>
+    <div class="field" style="text-align:center;">
+      <label>รูปสลิปโอนเงิน / หลักฐานรับเงินสด</label>
+      <div id="adhoc-pay-slip-preview" style="width:100%;max-height:160px;border-radius:8px;background:var(--pine-tint);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:12px;padding:14px;margin-bottom:8px;">ยังไม่มีรูป</div>
+      <input type="file" id="adhoc-pay-slip-file" accept="image/*" style="display:none;">
+      <input type="hidden" id="adhoc-pay-slip-key">
+      <button type="button" class="btn btn-sm" id="btn-upload-adhoc-slip">แนบรูปสลิป</button>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close="overlay-adhoc-pay">ยกเลิก</button>
+      <button class="btn btn-primary" id="btn-save-adhoc-pay">บันทึกการชำระเงิน</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADHOC BILL MODAL (บิลพิเศษระหว่างเดือน) -->
+<div class="overlay" id="overlay-adhoc-bill">
+  <div class="modal wide">
+    <div class="modal-head">
+      <h3 id="adhoc-bill-modal-title">สร้างบิลพิเศษ</h3>
+      <button class="modal-close" data-close="overlay-adhoc-bill">&times;</button>
+    </div>
+    <input type="hidden" id="adhoc-bill-id">
+    <input type="hidden" id="adhoc-bill-case-id">
+    <div class="field-row">
+      <div class="field">
+        <label>วันที่ออกบิล</label>
+        <input type="date" id="adhoc-bill-date">
+      </div>
+      <div class="field">
+        <label>หัวข้อ/หมายเหตุ</label>
+        <input type="text" id="adhoc-bill-note" placeholder="เช่น ค่าเวชภัณฑ์กลางเดือน">
+      </div>
+    </div>
+
+    <div class="summary-card" style="margin-bottom:14px;">
+      <h3>รายการในบิลนี้</h3>
+      <div id="adhoc-bill-items-list"></div>
+      <div class="add-entry-form">
+        <select id="adhoc-item-category" style="flex:1;min-width:200px;"></select>
+      </div>
+      <div class="add-entry-form">
+        <input type="text" id="adhoc-item-detail" placeholder="ระบุรายละเอียดเพิ่มเติม" style="flex:1;min-width:160px;">
+        <input type="number" id="adhoc-item-amount" placeholder="จำนวนเงิน" min="0" step="1">
+        <button class="btn btn-primary btn-sm" id="btn-add-adhoc-item">+ เพิ่มรายการ</button>
+      </div>
+      <p id="adhoc-item-hint" style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;"></p>
+    </div>
+
+    <div class="field">
+      <label>ส่วนลด (บาท)</label>
+      <input id="adhoc-bill-discount" type="number" min="0" step="1" value="0">
+    </div>
+    <p id="adhoc-bill-total-hint" style="font-size:13px;color:var(--ink-soft);margin:-6px 0 14px;"></p>
+
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="btn-delete-adhoc-bill" style="margin-right:auto;display:none;">ลบบิลนี้</button>
+      <button class="btn" data-close="overlay-adhoc-bill">ยกเลิก</button>
+      <button class="btn btn-primary" id="btn-save-adhoc-bill">บันทึกบิล</button>
     </div>
   </div>
 </div>
@@ -698,15 +984,18 @@
   <div class="modal doc-modal">
     <div class="doc-toolbar">
       <button class="btn btn-sm" id="btn-print-doc">พิมพ์ / บันทึก PDF</button>
+      <button class="btn btn-sm" id="btn-download-jpg-doc">บันทึก/แชร์รูปภาพ (JPG)</button>
       <button class="btn btn-sm btn-ghost" data-close="overlay-doc">ปิด</button>
     </div>
     <div id="print-area"></div>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 <script>
 const API_BASE = '/api/state';
-let state = { cases: [], entries: {}, payments: {}, branches: [], orgs: [] };
+let state = { cases: [], entries: {}, payments: {}, branches: [], orgs: [], bankAccounts: [], feeToggles: {}, adhocBills: [], appointments: [] };
 let ready = false;
 
 const avatarColors = ['#2F5F52','#B4863B','#B14D34','#3D6E9A','#7A5A9E','#3D7A56'];
@@ -736,7 +1025,65 @@ function dueDateForMonth(caseObj, ym){
   const day = Math.min(caseObj.dueDay || 1, daysInMonth(y,m));
   return new Date(y, m-1, day);
 }
+function nextYm(ym){
+  const [y,m] = ym.split('-').map(Number);
+  const d = new Date(y, m, 1); // เดือนถัดไป
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+const THAI_MONTH_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function thaiShortDate(d){
+  return d.getDate() + ' ' + THAI_MONTH_SHORT[d.getMonth()] + ' ' + String(d.getFullYear()+543).slice(-2);
+}
+function thaiMonthYearLabel(ym){
+  const [y,m] = ym.split('-').map(Number);
+  return THAI_MONTH_SHORT[m-1] + ' ' + (y+543);
+}
+// ช่วงวันที่ของรอบบิลค่าบริการรายเดือน: เริ่มจากวันครบกำหนดของเดือนนี้ ถึงวันก่อนวันครบกำหนดของเดือนถัดไป
+function monthlyFeePeriodLabel(caseObj, ym){
+  const start = dueDateForMonth(caseObj, ym);
+  const end = new Date(dueDateForMonth(caseObj, nextYm(ym)));
+  end.setDate(end.getDate() - 1);
+  return `ค่าบริการประจำเดือน วันที่ ${thaiShortDate(start)} - ${thaiShortDate(end)}`;
+}
 function key(caseId, ym){ return caseId + '|' + ym; }
+
+/* ---------- รายการค่าใช้จ่าย: ประเภทที่เลือกได้ ---------- */
+const ENTRY_CATEGORIES = [
+  { value: 'deposit',   label: 'ค่ามัดจำการให้บริการ' },
+  { value: 'procedure', label: 'ค่าบริการหัตถการทางการพยาบาล (ระบุเพิ่ม)' },
+  { value: 'escort',    label: 'ค่าบริการเจ้าหน้าที่พาไปพบแพทย์' },
+  { value: 'medicine',  label: 'ค่าบริการจัดหาเวชภัณฑ์ (บวก service charge 10% อัตโนมัติ)' },
+  { value: 'other',     label: 'อื่นๆ (ระบุ)' },
+];
+const MEDICINE_SERVICE_CHARGE_RATE = 0.10;
+function entryCategoryLabel(value){
+  const found = ENTRY_CATEGORIES.find(c=>c.value===value);
+  return found ? found.label.replace(/\s*\(.*\)$/, '') : '';
+}
+// ดึง "รายละเอียดเพิ่มเติม" กลับออกมาจาก desc ที่เคยประกอบไว้ตอนเพิ่มรายการ (ใช้ตอนเปิดฟอร์มแก้ไข)
+function extractDetailFromDesc(category, desc){
+  if(category === 'other') return desc || '';
+  const baseLabel = entryCategoryLabel(category);
+  if(desc && desc.startsWith(baseLabel + ' — ')) return desc.slice(baseLabel.length + 3);
+  return '';
+}
+// รวมยอดรายการ "ค่าบริการจัดหาเวชภัณฑ์" ทั้งหมดในชุดรายการนี้ก่อน แล้วคิด service charge 10% เพียงครั้งเดียว
+// (ลบรายการ service charge เดิมทิ้งแล้วคำนวณใหม่ทุกครั้งที่มีการเพิ่ม/ลบรายการเวชภัณฑ์)
+function recalcMedicineServiceCharge(items){
+  const filtered = (items || []).filter(it=>it.category !== 'medicine_service_charge');
+  const medicineItems = filtered.filter(it=>it.category === 'medicine');
+  const medicineTotal = medicineItems.reduce((s,it)=>s+it.amount,0);
+  if(medicineTotal > 0){
+    filtered.push({
+      id: uid(),
+      date: medicineItems[medicineItems.length-1]?.date || '',
+      desc: `ค่าบริการจัดหาเวชภัณฑ์ (service charge ${MEDICINE_SERVICE_CHARGE_RATE*100}% ของยอดเวชภัณฑ์รวม)`,
+      amount: Math.round(medicineTotal * MEDICINE_SERVICE_CHARGE_RATE),
+      category: 'medicine_service_charge',
+    });
+  }
+  return filtered;
+}
 
 async function loadState(){
   try{
@@ -746,9 +1093,12 @@ async function loadState(){
       const data = await res.json();
       state.orgs = data.orgs || [];
       state.branches = data.branches || [];
+      state.bankAccounts = data.bankAccounts || [];
       state.cases = data.cases || [];
       state.entries = data.entries || {};
       state.payments = data.payments || {};
+      state.feeToggles = data.feeToggles || {};
+      state.adhocBills = data.adhocBills || [];
     } else {
       console.error('โหลดข้อมูลไม่สำเร็จ:', res.status);
     }
@@ -784,11 +1134,16 @@ function showApp(){
 }
 function applyRolePermissions(){
   const isAdmin = currentUser && currentUser.role === 'admin';
+  const isManager = currentUser && currentUser.role === 'manager';
+  const roleLabel = isAdmin ? 'ผู้ดูแลระบบ' : isManager ? 'ผู้จัดการ' : 'พนักงานสาขา';
   document.getElementById('sidebar-user-name').textContent = currentUser ? currentUser.displayName : '';
   document.getElementById('sidebar-user-role').innerHTML = currentUser
-    ? `<span class="role-badge">${isAdmin ? 'ผู้ดูแลระบบ' : 'พนักงานสาขา'}</span>` : '';
+    ? `<span class="role-badge">${roleLabel}</span>` : '';
   document.querySelectorAll('[data-admin-only]').forEach(el=>{
     el.style.display = isAdmin ? '' : 'none';
+  });
+  document.querySelectorAll('[data-manager-up]').forEach(el=>{
+    el.style.display = (isAdmin || isManager) ? '' : 'none';
   });
 }
 
@@ -856,7 +1211,10 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
     btn.classList.add('active');
     document.getElementById('view-'+btn.dataset.view).classList.add('active');
     if(btn.dataset.view === 'entries') renderEntries();
+    if(btn.dataset.view === 'bills') renderBills();
+    if(btn.dataset.view === 'calendar') renderCalendar();
     if(btn.dataset.view === 'summary') renderSummary();
+    if(btn.dataset.view === 'docs-summary') renderDocsSummary();
     if(btn.dataset.view === 'settings') renderSettings();
     if(btn.dataset.view === 'users') renderUsers();
   });
@@ -893,12 +1251,47 @@ function renderOrgList(){
 }
 document.getElementById('btn-add-org').addEventListener('click', ()=> openOrgForm(null));
 
+function showOrgLogoPreview(key){
+  const box = document.getElementById('org-logo-preview');
+  if(key){
+    box.innerHTML = `<img src="/api/photo/${encodeURIComponent(key)}" style="width:100%;height:100%;object-fit:cover;">`;
+  } else {
+    box.innerHTML = 'ไม่มีโลโก้';
+  }
+}
+document.getElementById('btn-upload-logo').addEventListener('click', ()=>{
+  const orgId = document.getElementById('org-id').value;
+  if(!orgId){ alert('กรุณากรอกชื่อองค์กรและกดบันทึกก่อนหนึ่งครั้ง แล้วค่อยแก้ไขเพื่ออัปโหลดโลโก้'); return; }
+  document.getElementById('org-logo-file').click();
+});
+document.getElementById('org-logo-file').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ alert('กรุณาเลือกไฟล์รูปภาพ'); return; }
+  if(file.size > 5*1024*1024){ alert('ไฟล์รูปใหญ่เกินไป (จำกัด 5MB)'); return; }
+  const orgId = document.getElementById('org-id').value;
+  try{
+    const res = await fetch('/api/orgs/'+encodeURIComponent(orgId)+'/logo', {
+      method: 'POST',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok){ alert(body.error || 'อัปโหลดโลโก้ไม่สำเร็จ'); return; }
+    document.getElementById('org-logo-key').value = body.key;
+    showOrgLogoPreview(body.key);
+  }catch(err){ alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ อัปโหลดโลโก้ไม่สำเร็จ'); }
+});
+
 function openOrgForm(orgId){
   const o = state.orgs.find(x=>x.id===orgId);
   document.getElementById('org-modal-title').textContent = o ? 'แก้ไของค์กร' : 'เพิ่มองค์กร';
-  document.getElementById('org-id').value = o ? o.id : '';
+  document.getElementById('org-id').value = o ? o.id : uid();
   document.getElementById('org-name').value = o ? o.name : '';
   document.getElementById('org-logo').value = o ? (o.logo||'') : '';
+  document.getElementById('org-logo-key').value = o ? (o.logoKey||'') : '';
+  showOrgLogoPreview(o ? o.logoKey : '');
   document.getElementById('org-staff').value = o ? (o.staff||'') : '';
   document.getElementById('org-note').value = o ? (o.note||'หากชำระเงินสด มีส่วนลด 300 บาท') : 'หากชำระเงินสด มีส่วนลด 300 บาท';
   document.getElementById('btn-delete-org').style.display = o ? 'inline-flex' : 'none';
@@ -906,18 +1299,19 @@ function openOrgForm(orgId){
 }
 
 document.getElementById('btn-save-org').addEventListener('click', async ()=>{
-  const id = document.getElementById('org-id').value;
+  const id = document.getElementById('org-id').value || uid();
   const name = document.getElementById('org-name').value.trim();
   if(!name){ alert('กรุณากรอกชื่อองค์กร'); return; }
   const data = {
-    id: id || uid(),
+    id,
     name,
     logo: document.getElementById('org-logo').value.trim(),
+    logoKey: document.getElementById('org-logo-key').value,
     staff: document.getElementById('org-staff').value.trim(),
     note: document.getElementById('org-note').value.trim(),
   };
-  if(id){
-    const idx = state.orgs.findIndex(x=>x.id===id);
+  const idx = state.orgs.findIndex(x=>x.id===id);
+  if(idx >= 0){
     state.orgs[idx] = data;
   } else {
     state.orgs.push(data);
@@ -935,7 +1329,8 @@ document.getElementById('btn-delete-org').addEventListener('click', async ()=>{
   if(!confirm('ยืนยันการลบองค์กรนี้? สาขาที่สังกัดองค์กรนี้จะถูกลบด้วย')) return;
   const branchIds = state.branches.filter(b=>b.orgId===id).map(b=>b.id);
   state.branches = state.branches.filter(b=>b.orgId!==id);
-  state.cases.forEach(c=>{ if(branchIds.includes(c.branchId)) c.branchId=''; });
+  state.bankAccounts = state.bankAccounts.filter(a=>!branchIds.includes(a.branchId));
+  state.cases.forEach(c=>{ if(branchIds.includes(c.branchId)){ c.branchId=''; c.bankAccountId=''; } });
   state.orgs = state.orgs.filter(x=>x.id!==id);
   await saveState();
   closeOverlay('overlay-org');
@@ -993,6 +1388,46 @@ document.getElementById('btn-add-branch').addEventListener('click', ()=>{
   openBranchForm(null);
 });
 
+function renderBranchBankList(branchId){
+  const list = document.getElementById('branch-bank-list');
+  const accounts = state.bankAccounts.filter(a=>a.branchId===branchId);
+  if(accounts.length === 0){
+    list.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);margin:4px 0;">ยังไม่มีบัญชีธนาคาร</p>`;
+    return;
+  }
+  list.innerHTML = accounts.map(a=>`
+    <div class="entry-row">
+      <span class="entry-desc"><b>${escapeHtml(a.bankName)}</b> · ${escapeHtml(a.bankAcc)}<br><span style="color:var(--ink-soft);font-size:12px;">${escapeHtml(a.bankOwner||'')}</span></span>
+      <button class="btn btn-sm btn-ghost btn-danger" data-del-bank="${a.id}">ลบ</button>
+    </div>
+  `).join('');
+  list.querySelectorAll('[data-del-bank]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm('ยืนยันการลบบัญชีธนาคารนี้?')) return;
+      const bankId = btn.dataset.delBank;
+      state.bankAccounts = state.bankAccounts.filter(a=>a.id!==bankId);
+      state.cases.forEach(c=>{ if(c.bankAccountId===bankId) c.bankAccountId=''; });
+      await saveState();
+      renderBranchBankList(branchId);
+    });
+  });
+}
+
+document.getElementById('btn-add-bank-account').addEventListener('click', async ()=>{
+  const branchId = document.getElementById('branch-id').value;
+  if(!branchId){ alert('กรุณาบันทึกสาขานี้ก่อน แล้วเปิดแก้ไขเพื่อเพิ่มบัญชีธนาคาร'); return; }
+  const bankName = document.getElementById('new-bank-name').value.trim();
+  const bankAcc = document.getElementById('new-bank-acc').value.trim();
+  const bankOwner = document.getElementById('new-bank-owner').value.trim();
+  if(!bankName || !bankAcc){ alert('กรุณากรอกชื่อธนาคารและเลขที่บัญชี'); return; }
+  state.bankAccounts.push({ id: uid(), branchId, bankName, bankAcc, bankOwner });
+  await saveState();
+  document.getElementById('new-bank-name').value = '';
+  document.getElementById('new-bank-acc').value = '';
+  document.getElementById('new-bank-owner').value = '';
+  renderBranchBankList(branchId);
+});
+
 function openBranchForm(branchId){
   const b = state.branches.find(x=>x.id===branchId);
   document.getElementById('branch-modal-title').textContent = b ? 'แก้ไขสาขา' : 'เพิ่มสาขา';
@@ -1002,7 +1437,10 @@ function openBranchForm(branchId){
   document.getElementById('branch-name').value = b ? b.name : '';
   document.getElementById('branch-address').value = b ? (b.address||'') : '';
   document.getElementById('branch-phone').value = b ? (b.phone||'') : '';
+  document.getElementById('branch-code').value = b ? (b.code||'') : '';
   document.getElementById('btn-delete-branch').style.display = b ? 'inline-flex' : 'none';
+  document.getElementById('branch-bank-section').style.display = b ? '' : 'none';
+  if(b) renderBranchBankList(b.id);
   openOverlay('overlay-branch');
 }
 
@@ -1016,6 +1454,7 @@ document.getElementById('btn-save-branch').addEventListener('click', async ()=>{
     name,
     address: document.getElementById('branch-address').value.trim(),
     phone: document.getElementById('branch-phone').value.trim(),
+    code: document.getElementById('branch-code').value.trim(),
   };
   if(id){
     const idx = state.branches.findIndex(x=>x.id===id);
@@ -1034,8 +1473,10 @@ document.getElementById('btn-delete-branch').addEventListener('click', async ()=
   const id = document.getElementById('branch-id').value;
   if(!id) return;
   if(!confirm('ยืนยันการลบสาขานี้? เคสที่เคยผูกกับสาขานี้จะไม่ระบุสาขาแทน')) return;
+  const bankIds = state.bankAccounts.filter(a=>a.branchId===id).map(a=>a.id);
   state.branches = state.branches.filter(x=>x.id!==id);
-  state.cases.forEach(c=>{ if(c.branchId===id) c.branchId=''; });
+  state.bankAccounts = state.bankAccounts.filter(a=>a.branchId!==id);
+  state.cases.forEach(c=>{ if(c.branchId===id){ c.branchId=''; c.bankAccountId=''; } else if(bankIds.includes(c.bankAccountId)) c.bankAccountId=''; });
   await saveState();
   closeOverlay('overlay-branch');
   renderBranchList();
@@ -1079,17 +1520,32 @@ function populateCaseBranchFilter(){
     branches.map(b=>`<option value="${b.id}">${escapeHtml(b.name)}${!orgId ? ' ('+escapeHtml(orgName(b.orgId))+')' : ''}</option>`).join('');
   if(prev && [...sel.options].some(o=>o.value===prev)) sel.value = prev;
 }
+let showArchivedCases = false;
 function casesForFilter(){
   const orgId = document.getElementById('case-org-filter').value;
   const branchId = document.getElementById('case-branch-filter').value;
-  if(orgId === UNASSIGNED) return casesWithoutBranch();
-  if(branchId) return state.cases.filter(c=>c.branchId===branchId);
-  if(orgId){
+  let base;
+  if(orgId === UNASSIGNED) base = casesWithoutBranch();
+  else if(branchId) base = state.cases.filter(c=>c.branchId===branchId);
+  else if(orgId){
     const branchIds = state.branches.filter(b=>b.orgId===orgId).map(b=>b.id);
-    return state.cases.filter(c=>branchIds.includes(c.branchId));
-  }
-  return state.cases;
+    base = state.cases.filter(c=>branchIds.includes(c.branchId));
+  } else base = state.cases;
+  return base.filter(c=> showArchivedCases ? !!c.movedOut : !c.movedOut);
 }
+function updateArchiveToggleUI(){
+  document.getElementById('btn-toggle-archive').textContent = showArchivedCases ? '← กลับไปเคสที่ใช้งานอยู่' : 'คลังเก็บถาวร (เคสย้ายออก)';
+  document.getElementById('btn-add-case').style.display = showArchivedCases ? 'none' : '';
+  document.getElementById('cases-view-title').textContent = showArchivedCases ? 'เคสที่ย้ายออกแล้ว' : 'รายชื่อเคส';
+  document.getElementById('cases-view-sub').textContent = showArchivedCases
+    ? 'ประวัติเคสที่ย้ายออก ไม่นับรวมในบิล/สรุปที่ใช้งานอยู่ — กด "กู้คืน" เพื่อกลับมาใช้งานเคสอีกครั้ง'
+    : 'เลือกองค์กร > สาขา ก่อน แล้วเพิ่มรายชื่อเคสในสาขานั้น';
+}
+document.getElementById('btn-toggle-archive').addEventListener('click', ()=>{
+  showArchivedCases = !showArchivedCases;
+  updateArchiveToggleUI();
+  renderCases();
+});
 document.getElementById('case-org-filter').addEventListener('change', ()=>{
   populateCaseBranchFilter();
   renderCases();
@@ -1097,6 +1553,7 @@ document.getElementById('case-org-filter').addEventListener('change', ()=>{
 document.getElementById('case-branch-filter').addEventListener('change', renderCases);
 
 function renderCases(){
+  updateArchiveToggleUI();
   populateCaseOrgFilter();
   populateCaseBranchFilter();
   const container = document.getElementById('cases-container');
@@ -1128,10 +1585,17 @@ function renderCases(){
         <div>ค่าบริการรายเดือน &nbsp;<b>${thb(c.monthlyFee)}</b></div>
         <div>ครบกำหนดชำระทุกวันที่ &nbsp;<b>${c.dueDay}</b></div>
         <div>บัญชีรับเงิน &nbsp;<b>${escapeHtml(c.bankName || '—')} ${c.bankAcc ? '· '+escapeHtml(c.bankAcc):''}</b></div>
+        ${c.movedOut ? `<div style="color:#B3261E;">ย้ายออกวันที่ &nbsp;<b>${c.moveOutDate ? new Date(c.moveOutDate+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—'}</b></div>` : ''}
       </div>
       <div class="case-actions">
-        <button class="btn btn-sm" data-edit-case="${c.id}">แก้ไข</button>
-        <button class="btn btn-sm btn-ghost" data-goto-entries="${c.id}">บันทึกค่าใช้จ่าย</button>
+        ${c.movedOut ? `
+          <button class="btn btn-sm" data-edit-case="${c.id}">แก้ไข</button>
+          <button class="btn btn-sm btn-primary" data-restore-case="${c.id}">กู้คืน</button>
+        ` : `
+          <button class="btn btn-sm" data-edit-case="${c.id}">แก้ไข</button>
+          <button class="btn btn-sm btn-ghost" data-goto-entries="${c.id}">บันทึกค่าใช้จ่าย</button>
+          <button class="btn btn-sm btn-danger" data-moveout-case="${c.id}">ย้ายออก</button>
+        `}
       </div>
     </div>
   `).join('')}</div>`;
@@ -1145,6 +1609,37 @@ function renderCases(){
       selectEntryForCase(b.dataset.gotoEntries);
     });
   });
+  container.querySelectorAll('[data-moveout-case]').forEach(b=>{
+    b.addEventListener('click', ()=> moveOutCase(b.dataset.moveoutCase));
+  });
+  container.querySelectorAll('[data-restore-case]').forEach(b=>{
+    b.addEventListener('click', ()=> restoreCase(b.dataset.restoreCase));
+  });
+}
+
+async function moveOutCase(caseId){
+  const c = state.cases.find(x=>x.id===caseId);
+  if(!c) return;
+  const dateStr = prompt(`ระบุวันที่ย้ายออกของ "${c.name}" (รูปแบบ YYYY-MM-DD)`, new Date().toISOString().slice(0,10));
+  if(dateStr === null) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)){ alert('รูปแบบวันที่ไม่ถูกต้อง กรุณาระบุเป็น YYYY-MM-DD เช่น 2569-07-16'); return; }
+  if(!confirm(`ยืนยันย้าย "${c.name}" ไปคลังเก็บถาวร?\nจะไม่นับรวมในบิลค้างชำระ/สรุปรายเดือนอีกต่อไป (ข้อมูลเดิมยังเก็บไว้ครบ กู้คืนได้ภายหลัง)`)) return;
+  c.movedOut = true;
+  c.moveOutDate = dateStr;
+  await saveState();
+  renderCases();
+  renderDueBanner();
+}
+
+async function restoreCase(caseId){
+  const c = state.cases.find(x=>x.id===caseId);
+  if(!c) return;
+  if(!confirm(`ยืนยันกู้คืน "${c.name}" กลับมาเป็นเคสที่ใช้งานอยู่?`)) return;
+  c.movedOut = false;
+  c.moveOutDate = '';
+  await saveState();
+  renderCases();
+  renderDueBanner();
 }
 
 function escapeHtml(s){
@@ -1172,6 +1667,19 @@ function populateCaseBranchSelect(selected){
   sel.innerHTML = '<option value="">— ไม่ระบุสาขา —</option>' + groups;
   sel.value = selected || '';
 }
+
+function populateCaseBankAccountSelect(branchId, selected){
+  const sel = document.getElementById('case-bank-account');
+  const hint = document.getElementById('case-bank-hint');
+  const accounts = branchId ? state.bankAccounts.filter(a=>a.branchId===branchId) : [];
+  sel.innerHTML = '<option value="">— เลือกบัญชีธนาคาร —</option>' +
+    accounts.map(a=>`<option value="${a.id}">${escapeHtml(a.bankName)} · ${escapeHtml(a.bankAcc)}${a.bankOwner ? ' ('+escapeHtml(a.bankOwner)+')' : ''}</option>`).join('');
+  sel.value = (selected && accounts.some(a=>a.id===selected)) ? selected : '';
+  hint.style.display = accounts.length === 0 ? '' : 'none';
+}
+document.getElementById('case-branch').addEventListener('change', ()=>{
+  populateCaseBankAccountSelect(document.getElementById('case-branch').value, '');
+});
 
 function showCasePhotoPreview(key){
   const box = document.getElementById('case-photo-preview');
@@ -1220,9 +1728,7 @@ function openCaseForm(caseId, defaultBranchId){
   document.getElementById('case-emergency-phone').value = c ? (c.emergencyPhone||'') : '';
   document.getElementById('case-fee').value = c ? c.monthlyFee : '';
   document.getElementById('case-admission-date').value = c ? (c.admissionDate||'') : '';
-  document.getElementById('case-bankname').value = c ? (c.bankName||'') : '';
-  document.getElementById('case-bankacc').value = c ? (c.bankAcc||'') : '';
-  document.getElementById('case-bankname-owner').value = c ? (c.bankOwner||'') : '';
+  populateCaseBankAccountSelect(document.getElementById('case-branch').value, c ? c.bankAccountId : '');
   document.getElementById('case-photo-key').value = c ? (c.photoKey||'') : '';
   showCasePhotoPreview(c ? c.photoKey : '');
   document.getElementById('btn-delete-case').style.display = c ? 'inline-flex' : 'none';
@@ -1249,11 +1755,14 @@ document.getElementById('btn-save-case').addEventListener('click', async ()=>{
     monthlyFee: Number(document.getElementById('case-fee').value) || 0,
     admissionDate,
     dueDay,
-    bankName: document.getElementById('case-bankname').value.trim(),
-    bankAcc: document.getElementById('case-bankacc').value.trim(),
-    bankOwner: document.getElementById('case-bankname-owner').value.trim(),
     photoKey: document.getElementById('case-photo-key').value,
   };
+  const bankAccountId = document.getElementById('case-bank-account').value;
+  const bankAccount = state.bankAccounts.find(a=>a.id===bankAccountId);
+  data.bankAccountId = bankAccountId;
+  data.bankName = bankAccount ? bankAccount.bankName : '';
+  data.bankAcc = bankAccount ? bankAccount.bankAcc : '';
+  data.bankOwner = bankAccount ? bankAccount.bankOwner : '';
   const idx = state.cases.findIndex(x=>x.id===id);
   if(idx >= 0){
     state.cases[idx] = data;
@@ -1273,6 +1782,8 @@ document.getElementById('btn-delete-case').addEventListener('click', async ()=>{
   state.cases = state.cases.filter(x=>x.id!==id);
   Object.keys(state.entries).forEach(k=>{ if(k.startsWith(id+'|')) delete state.entries[k]; });
   Object.keys(state.payments).forEach(k=>{ if(k.startsWith(id+'|')) delete state.payments[k]; });
+  Object.keys(state.feeToggles).forEach(k=>{ if(k.startsWith(id+'|')) delete state.feeToggles[k]; });
+  state.adhocBills = state.adhocBills.filter(b=>b.caseId!==id);
   await saveState();
   closeOverlay('overlay-case');
   renderCases();
@@ -1321,6 +1832,7 @@ function populateEntryCaseSelect(){
   } else {
     cases = state.cases.filter(c=>c.branchId===branchId);
   }
+  cases = cases.filter(c=>!c.movedOut); // เคสที่ย้ายออกแล้วไม่ต้องให้บันทึกค่าใช้จ่ายเพิ่ม
   if(cases.length === 0){
     sel.innerHTML = `<option value="">— ไม่มีเคสในสาขานี้ —</option>`;
   } else {
@@ -1353,9 +1865,27 @@ document.getElementById('entry-org-select').addEventListener('change', ()=>{
 document.getElementById('entry-branch-select').addEventListener('change', populateEntryCaseSelect);
 document.getElementById('entry-month-select').value = currentMonthStr();
 document.getElementById('summary-month-select').value = currentMonthStr();
+document.getElementById('bills-month-select').value = currentMonthStr();
+document.getElementById('docs-summary-month').value = currentMonthStr();
+document.getElementById('calendar-month-select').value = currentMonthStr();
 document.getElementById('entry-case-select').addEventListener('change', renderEntries);
 document.getElementById('entry-month-select').addEventListener('change', renderEntries);
 document.getElementById('summary-month-select').addEventListener('change', renderSummary);
+document.getElementById('bills-month-select').addEventListener('change', renderBills);
+document.getElementById('summary-branch-filter').addEventListener('change', renderSummary);
+document.getElementById('bills-branch-filter').addEventListener('change', renderBills);
+document.getElementById('docs-summary-month').addEventListener('change', renderDocsSummary);
+document.getElementById('docs-summary-branch-filter').addEventListener('change', renderDocsSummary);
+document.getElementById('calendar-month-select').addEventListener('change', renderCalendar);
+document.getElementById('calendar-branch-filter').addEventListener('change', renderCalendar);
+
+function populateBranchFilterSelect(selId){
+  const sel = document.getElementById(selId);
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— ทุกสาขา —</option>' +
+    state.branches.map(b=>`<option value="${b.id}">${escapeHtml(b.name)}${orgOfBranch(b.id) ? ' ('+escapeHtml(orgOfBranch(b.id))+')' : ''}</option>`).join('');
+  if(prev && [...sel.options].some(o=>o.value===prev)) sel.value = prev;
+}
 
 function renderEntries(){
   const body = document.getElementById('entries-body');
@@ -1373,14 +1903,19 @@ function renderEntries(){
   const k = key(c.id, ym);
   const items = state.entries[k] || [];
   const otherTotal = items.reduce((s,it)=>s+it.amount,0);
-  const grandTotal = c.monthlyFee + otherTotal;
+  const feeIncluded = isMonthlyFeeIncluded(c, ym);
+  const feeAmount = feeIncluded ? c.monthlyFee : 0;
+  const grandTotal = feeAmount + otherTotal;
 
   body.innerHTML = `
     <div class="entry-panel">
       <div>
         <div class="fee-line">
-          <span>ค่าบริการรายเดือน — ${monthLabel(ym)}</span>
-          <span class="amt">${thb(c.monthlyFee)}</span>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;">
+            <input type="checkbox" id="fee-included-toggle" ${feeIncluded ? 'checked' : ''} style="width:auto;">
+            <span>${monthlyFeePeriodLabel(c, ym)}</span>
+          </label>
+          <span class="amt">${feeIncluded ? thb(c.monthlyFee) : 'ไม่รวมเดือนนี้'}</span>
         </div>
         <div class="summary-card">
           <h3>ค่าบริการอื่นๆ ในเดือนนี้</h3>
@@ -1390,53 +1925,543 @@ function renderEntries(){
                 <span class="entry-date">${it.date ? new Date(it.date).toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit'}) : '—'}</span>
                 <span class="entry-desc">${escapeHtml(it.desc)}</span>
                 <span class="entry-amt">${thb(it.amount)}</span>
+                ${it.category !== 'medicine_service_charge' ? `<button class="btn btn-sm btn-ghost" data-edit-entry="${it.id}">แก้ไข</button>` : ''}
                 <button class="btn btn-sm btn-ghost btn-danger" data-del-entry="${it.id}">ลบ</button>
               </div>
             `).join('') : `<p style="font-size:13px;color:var(--ink-soft);margin:4px 0;">ยังไม่มีรายการค่าใช้จ่ายอื่นๆ</p>`}
           </div>
+          <p id="edit-entry-banner" style="display:none;font-size:12.5px;color:var(--ink-soft);margin:10px 0 0;">กำลังแก้ไขรายการ — แก้ไขค่าด้านล่างแล้วกด "บันทึกการแก้ไข" หรือกด "ยกเลิก" เพื่อเลิกแก้ไข</p>
           <div class="add-entry-form">
             <input type="date" id="new-entry-date" value="${ym}-01">
-            <input type="text" id="new-entry-desc" placeholder="รายการ เช่น ค่ายาเพิ่มเติม">
+            <select id="new-entry-category" style="flex:1;min-width:200px;">
+              ${ENTRY_CATEGORIES.map(cat=>`<option value="${cat.value}">${cat.label}</option>`).join('')}
+            </select>
+          </div>
+          <div class="add-entry-form">
+            <input type="text" id="new-entry-detail" placeholder="ระบุรายละเอียดเพิ่มเติม" style="flex:1;min-width:160px;">
             <input type="number" id="new-entry-amount" placeholder="จำนวนเงิน" min="0" step="1">
             <button class="btn btn-primary btn-sm" id="btn-add-entry">+ เพิ่มรายการ</button>
+            <button class="btn btn-sm btn-ghost" id="btn-cancel-edit-entry" style="display:none;">ยกเลิก</button>
           </div>
+          <p id="new-entry-hint" style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;"></p>
         </div>
       </div>
       <div class="summary-card">
         <h3>สรุปยอด — ${escapeHtml(c.name)}</h3>
-        <div class="summary-line"><span>ค่าบริการรายเดือน</span><b>${thb(c.monthlyFee)}</b></div>
+        <div class="summary-line"><span>ค่าบริการประจำเดือน${feeIncluded ? '' : ' (ไม่รวมเดือนนี้)'}</span><b>${thb(feeAmount)}</b></div>
         <div class="summary-line"><span>ค่าบริการอื่นๆ (${items.length} รายการ)</span><b>${thb(otherTotal)}</b></div>
         <div class="summary-total"><span>ยอดรวมทั้งหมด</span><span>${thb(grandTotal)}</span></div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin:14px 0 0;">ครบกำหนดชำระ ${thaiDateLong(dueDateForMonth(c, ym))}</p>
       </div>
     </div>
+    <div class="summary-card" style="margin-top:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="margin:0;">บิลพิเศษระหว่างเดือน (แยกอิสระจากรอบบิลรายเดือน)</h3>
+        <button class="btn btn-sm" id="btn-add-adhoc-bill">+ สร้างบิลพิเศษ</button>
+      </div>
+      <div id="adhoc-bill-list"></div>
+    </div>
   `;
 
-  document.getElementById('btn-add-entry').addEventListener('click', async ()=>{
-    const date = document.getElementById('new-entry-date').value;
-    const desc = document.getElementById('new-entry-desc').value.trim();
-    const amount = Number(document.getElementById('new-entry-amount').value);
-    if(!desc || !amount){ alert('กรุณากรอกรายการและจำนวนเงิน'); return; }
-    if(!state.entries[k]) state.entries[k] = [];
-    state.entries[k].push({id:uid(), date, desc, amount});
+  document.getElementById('btn-add-adhoc-bill').addEventListener('click', ()=> openAdhocBillForm(c.id, null));
+  renderAdhocBillList(c.id);
+
+  document.getElementById('fee-included-toggle').addEventListener('change', async (e)=>{
+    state.feeToggles[k] = e.target.checked;
     await saveState();
     renderEntries();
   });
 
+  function updateEntryHint(){
+    const cat = document.getElementById('new-entry-category').value;
+    const hint = document.getElementById('new-entry-hint');
+    const detailInput = document.getElementById('new-entry-detail');
+    if(cat === 'medicine'){
+      hint.textContent = `กรอกยอดค่าเวชภัณฑ์ — ระบบจะบวก service charge ${MEDICINE_SERVICE_CHARGE_RATE*100}% ให้อัตโนมัติเป็นอีกหนึ่งรายการ`;
+      detailInput.placeholder = 'ระบุรายการเวชภัณฑ์ (ไม่บังคับ)';
+    } else if(cat === 'procedure'){
+      hint.textContent = 'กรุณาระบุรายละเอียดหัตถการที่ให้บริการ';
+      detailInput.placeholder = 'เช่น ทำแผล, ให้น้ำเกลือ';
+    } else if(cat === 'other'){
+      hint.textContent = 'กรุณาระบุรายการ';
+      detailInput.placeholder = 'ระบุรายการ';
+    } else {
+      hint.textContent = '';
+      detailInput.placeholder = 'ระบุรายละเอียดเพิ่มเติม (ไม่บังคับ)';
+    }
+  }
+  document.getElementById('new-entry-category').addEventListener('change', updateEntryHint);
+  updateEntryHint();
+
+  let editingEntryId = null;
+  function startEditEntry(entryId){
+    const it = (state.entries[k]||[]).find(x=>x.id===entryId);
+    if(!it) return;
+    editingEntryId = entryId;
+    document.getElementById('new-entry-date').value = it.date || (ym+'-01');
+    document.getElementById('new-entry-category').value = it.category || 'other';
+    document.getElementById('new-entry-detail').value = extractDetailFromDesc(it.category, it.desc);
+    document.getElementById('new-entry-amount').value = it.amount;
+    updateEntryHint();
+    document.getElementById('btn-add-entry').textContent = 'บันทึกการแก้ไข';
+    document.getElementById('btn-cancel-edit-entry').style.display = '';
+    document.getElementById('edit-entry-banner').style.display = '';
+  }
+  function cancelEditEntry(){
+    editingEntryId = null;
+    document.getElementById('new-entry-date').value = ym+'-01';
+    document.getElementById('new-entry-category').value = ENTRY_CATEGORIES[0].value;
+    document.getElementById('new-entry-detail').value = '';
+    document.getElementById('new-entry-amount').value = '';
+    document.getElementById('btn-add-entry').textContent = '+ เพิ่มรายการ';
+    document.getElementById('btn-cancel-edit-entry').style.display = 'none';
+    document.getElementById('edit-entry-banner').style.display = 'none';
+    updateEntryHint();
+  }
+  document.getElementById('btn-cancel-edit-entry').addEventListener('click', cancelEditEntry);
+  body.querySelectorAll('[data-edit-entry]').forEach(btn=>{
+    btn.addEventListener('click', ()=> startEditEntry(btn.dataset.editEntry));
+  });
+
+  document.getElementById('btn-add-entry').addEventListener('click', async ()=>{
+    const date = document.getElementById('new-entry-date').value;
+    const category = document.getElementById('new-entry-category').value;
+    const detail = document.getElementById('new-entry-detail').value.trim();
+    const amount = Number(document.getElementById('new-entry-amount').value);
+    if((category === 'procedure' || category === 'other') && !detail){
+      alert('กรุณาระบุรายละเอียดของรายการนี้'); return;
+    }
+    if(!amount){ alert('กรุณากรอกจำนวนเงิน'); return; }
+    if(!state.entries[k]) state.entries[k] = [];
+
+    const baseLabel = entryCategoryLabel(category);
+    const desc = category === 'other' ? detail : (detail ? `${baseLabel} — ${detail}` : baseLabel);
+
+    if(editingEntryId){
+      const idx = state.entries[k].findIndex(it=>it.id===editingEntryId);
+      if(idx >= 0){
+        const oldCategory = state.entries[k][idx].category;
+        state.entries[k][idx] = { ...state.entries[k][idx], date, desc, amount, category };
+        if(oldCategory === 'medicine' || category === 'medicine'){
+          state.entries[k] = recalcMedicineServiceCharge(state.entries[k]);
+        }
+      }
+      editingEntryId = null;
+    } else {
+      state.entries[k].push({ id: uid(), date, desc, amount, category });
+      if(category === 'medicine'){
+        state.entries[k] = recalcMedicineServiceCharge(state.entries[k]);
+      }
+    }
+
+    await saveState();
+    renderEntries();
+    renderApptReminderBanner();
+  });
+
   body.querySelectorAll('[data-del-entry]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
+      const target = (state.entries[k]||[]).find(it=>it.id===btn.dataset.delEntry);
       state.entries[k] = (state.entries[k]||[]).filter(it=>it.id!==btn.dataset.delEntry);
+      if(target && target.category === 'medicine'){
+        state.entries[k] = recalcMedicineServiceCharge(state.entries[k]);
+      }
       await saveState();
       renderEntries();
+      renderApptReminderBanner();
     });
   });
 }
 
+/* ---------- ADHOC BILLS (บิลพิเศษระหว่างเดือน แยกอิสระจากรอบบิลรายเดือน) ---------- */
+let adhocFormItems = [];
+
+function adhocBillsForCase(caseId){
+  return state.adhocBills.filter(b=>b.caseId===caseId);
+}
+function computeAdhocBillTotal(bill){
+  const subtotal = (bill.items||[]).reduce((s,it)=>s+it.amount,0);
+  const discount = bill.discount || 0;
+  return { subtotal, discount, net: Math.max(subtotal-discount,0) };
+}
+
+function renderAdhocBillList(caseId){
+  const list = document.getElementById('adhoc-bill-list');
+  if(!list) return;
+  const bills = adhocBillsForCase(caseId).slice().sort((a,b)=> (b.billDate||'').localeCompare(a.billDate||''));
+  if(bills.length === 0){
+    list.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);margin:4px 0;">ยังไม่มีบิลพิเศษ</p>`;
+    return;
+  }
+  list.innerHTML = bills.map(b=>{
+    const {net} = computeAdhocBillTotal(b);
+    const tag = b.paid ? `<span class="tag tag-paid">ชำระแล้ว</span>` : `<span class="tag tag-due">รอชำระ</span>`;
+    return `
+    <div class="entry-row">
+      <span class="entry-desc">
+        <b>${escapeHtml(b.note || 'บิลพิเศษ')}</b> ${tag}<br>
+        <span style="color:var(--ink-soft);font-size:12px;">${b.billDate ? new Date(b.billDate+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—'} · ${(b.items||[]).length} รายการ · ยอดสุทธิ ${thb(net)}</span>
+      </span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-sm" data-adhoc-invoice="${b.id}">ใบเรียกเก็บ</button>
+        ${b.paid ? `<button class="btn btn-sm" data-adhoc-receipt="${b.id}">ใบเสร็จ</button>` : `<button class="btn btn-sm btn-primary" data-adhoc-pay="${b.id}">ยืนยันชำระ</button>`}
+        <button class="btn btn-sm btn-ghost" data-adhoc-edit="${b.id}">แก้ไข</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('[data-adhoc-invoice]').forEach(btn=>{
+    btn.addEventListener('click', ()=> showAdhocInvoice(btn.dataset.adhocInvoice));
+  });
+  list.querySelectorAll('[data-adhoc-receipt]').forEach(btn=>{
+    btn.addEventListener('click', ()=> showAdhocReceipt(btn.dataset.adhocReceipt));
+  });
+  list.querySelectorAll('[data-adhoc-pay]').forEach(btn=>{
+    btn.addEventListener('click', ()=> openAdhocPayForm(btn.dataset.adhocPay));
+  });
+  list.querySelectorAll('[data-adhoc-edit]').forEach(btn=>{
+    btn.addEventListener('click', ()=> openAdhocBillForm(caseId, btn.dataset.adhocEdit));
+  });
+}
+
+function renderAdhocItemsList(){
+  const list = document.getElementById('adhoc-bill-items-list');
+  if(adhocFormItems.length === 0){
+    list.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);margin:4px 0;">ยังไม่มีรายการ</p>`;
+  } else {
+    list.innerHTML = adhocFormItems.map(it=>`
+      <div class="entry-row">
+        <span class="entry-desc">${escapeHtml(it.desc)}</span>
+        <span class="entry-amt">${thb(it.amount)}</span>
+        <button class="btn btn-sm btn-ghost btn-danger" data-del-adhoc-item="${it.id}">ลบ</button>
+      </div>
+    `).join('');
+  }
+  list.querySelectorAll('[data-del-adhoc-item]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = adhocFormItems.find(it=>it.id===btn.dataset.delAdhocItem);
+      adhocFormItems = adhocFormItems.filter(it=>it.id!==btn.dataset.delAdhocItem);
+      if(target && target.category === 'medicine'){
+        adhocFormItems = recalcMedicineServiceCharge(adhocFormItems);
+      }
+      renderAdhocItemsList();
+    });
+  });
+  updateAdhocTotalHint();
+}
+
+function updateAdhocTotalHint(){
+  const subtotal = adhocFormItems.reduce((s,it)=>s+it.amount,0);
+  const discount = Number(document.getElementById('adhoc-bill-discount').value) || 0;
+  document.getElementById('adhoc-bill-total-hint').textContent = `ยอดรวม ${thb(subtotal)} — หลังหักส่วนลด ${thb(Math.max(subtotal-discount,0))}`;
+}
+document.getElementById('adhoc-bill-discount').addEventListener('input', updateAdhocTotalHint);
+
+function populateAdhocCategorySelect(){
+  const sel = document.getElementById('adhoc-item-category');
+  sel.innerHTML = ENTRY_CATEGORIES.map(cat=>`<option value="${cat.value}">${cat.label}</option>`).join('') +
+    `<option value="monthly">ค่าบริการประจำเดือน (กรณีเรียกเก็บแยก)</option>`;
+}
+function updateAdhocItemHint(){
+  const cat = document.getElementById('adhoc-item-category').value;
+  const hint = document.getElementById('adhoc-item-hint');
+  const detailInput = document.getElementById('adhoc-item-detail');
+  if(cat === 'medicine'){
+    hint.textContent = `กรอกยอดค่าเวชภัณฑ์ — ระบบจะบวก service charge ${MEDICINE_SERVICE_CHARGE_RATE*100}% ให้อัตโนมัติเป็นอีกหนึ่งรายการ`;
+    detailInput.placeholder = 'ระบุรายการเวชภัณฑ์ (ไม่บังคับ)';
+  } else if(cat === 'procedure' || cat === 'other'){
+    hint.textContent = 'กรุณาระบุรายละเอียด';
+    detailInput.placeholder = 'ระบุรายละเอียด';
+  } else {
+    hint.textContent = '';
+    detailInput.placeholder = 'ระบุรายละเอียดเพิ่มเติม (ไม่บังคับ)';
+  }
+}
+document.getElementById('adhoc-item-category').addEventListener('change', updateAdhocItemHint);
+
+document.getElementById('btn-add-adhoc-item').addEventListener('click', ()=>{
+  const category = document.getElementById('adhoc-item-category').value;
+  const detail = document.getElementById('adhoc-item-detail').value.trim();
+  const amount = Number(document.getElementById('adhoc-item-amount').value);
+  if((category === 'procedure' || category === 'other') && !detail){ alert('กรุณาระบุรายละเอียดของรายการนี้'); return; }
+  if(!amount){ alert('กรุณากรอกจำนวนเงิน'); return; }
+
+  const baseLabel = category === 'monthly' ? 'ค่าบริการประจำเดือน' : entryCategoryLabel(category);
+  const desc = category === 'other' ? detail : (detail ? `${baseLabel} — ${detail}` : baseLabel);
+  adhocFormItems.push({ id: uid(), desc, amount, category });
+
+  if(category === 'medicine'){
+    adhocFormItems = recalcMedicineServiceCharge(adhocFormItems);
+  }
+
+  document.getElementById('adhoc-item-detail').value = '';
+  document.getElementById('adhoc-item-amount').value = '';
+  renderAdhocItemsList();
+});
+
+function openAdhocBillForm(caseId, billId){
+  const b = billId ? state.adhocBills.find(x=>x.id===billId) : null;
+  document.getElementById('adhoc-bill-modal-title').textContent = b ? 'แก้ไขบิลพิเศษ' : 'สร้างบิลพิเศษ';
+  document.getElementById('adhoc-bill-id').value = b ? b.id : uid();
+  document.getElementById('adhoc-bill-case-id').value = caseId;
+  document.getElementById('adhoc-bill-date').value = b ? b.billDate : new Date().toISOString().slice(0,10);
+  document.getElementById('adhoc-bill-note').value = b ? (b.note||'') : '';
+  document.getElementById('adhoc-bill-discount').value = b ? (b.discount||0) : 0;
+  adhocFormItems = b ? JSON.parse(JSON.stringify(b.items||[])) : [];
+  populateAdhocCategorySelect();
+  document.getElementById('adhoc-item-detail').value = '';
+  document.getElementById('adhoc-item-amount').value = '';
+  updateAdhocItemHint();
+  renderAdhocItemsList();
+  document.getElementById('btn-delete-adhoc-bill').style.display = b ? 'inline-flex' : 'none';
+  openOverlay('overlay-adhoc-bill');
+}
+
+document.getElementById('btn-save-adhoc-bill').addEventListener('click', async ()=>{
+  const id = document.getElementById('adhoc-bill-id').value;
+  const caseId = document.getElementById('adhoc-bill-case-id').value;
+  const billDate = document.getElementById('adhoc-bill-date').value;
+  const note = document.getElementById('adhoc-bill-note').value.trim();
+  const discount = Number(document.getElementById('adhoc-bill-discount').value) || 0;
+  if(!billDate){ alert('กรุณาระบุวันที่ออกบิล'); return; }
+  if(adhocFormItems.length === 0){ alert('กรุณาเพิ่มอย่างน้อย 1 รายการ'); return; }
+
+  const existing = state.adhocBills.find(x=>x.id===id) || {};
+  const data = {
+    id, caseId, billDate, note, discount,
+    items: adhocFormItems,
+    paid: existing.paid || false,
+    paidDate: existing.paidDate || '',
+    paidAmount: existing.paidAmount ?? null,
+    method: existing.method || '',
+    invoiceNo: existing.invoiceNo || '',
+    receiptNo: existing.receiptNo || '',
+    slipKey: existing.slipKey || '',
+  };
+  const idx = state.adhocBills.findIndex(x=>x.id===id);
+  if(idx >= 0){ state.adhocBills[idx] = data; } else { state.adhocBills.push(data); }
+  await saveState();
+  closeOverlay('overlay-adhoc-bill');
+  renderAdhocBillList(caseId);
+  renderBills();
+});
+
+document.getElementById('btn-delete-adhoc-bill').addEventListener('click', async ()=>{
+  const id = document.getElementById('adhoc-bill-id').value;
+  const caseId = document.getElementById('adhoc-bill-case-id').value;
+  if(!id) return;
+  if(!confirm('ยืนยันการลบบิลพิเศษนี้?')) return;
+  state.adhocBills = state.adhocBills.filter(x=>x.id!==id);
+  await saveState();
+  closeOverlay('overlay-adhoc-bill');
+  renderAdhocBillList(caseId);
+  renderBills();
+});
+
+/* ---------- ADHOC BILL PAYMENT ---------- */
+function showAdhocPaySlipPreview(key){
+  const box = document.getElementById('adhoc-pay-slip-preview');
+  if(key){
+    box.innerHTML = `<img src="/api/photo/${encodeURIComponent(key)}" style="max-width:100%;max-height:160px;object-fit:contain;">`;
+  } else {
+    box.innerHTML = 'ยังไม่มีรูป';
+  }
+}
+function openAdhocPayForm(billId){
+  const b = state.adhocBills.find(x=>x.id===billId);
+  if(!b) return;
+  const {net} = computeAdhocBillTotal(b);
+  document.getElementById('adhoc-pay-id').value = billId;
+  document.getElementById('adhoc-pay-date').value = b.paidDate || new Date().toISOString().slice(0,10);
+  document.getElementById('adhoc-pay-amount').value = b.paidAmount ?? net;
+  document.getElementById('adhoc-pay-method').value = b.method || 'โอนเงินผ่านธนาคาร';
+  document.getElementById('adhoc-pay-slip-key').value = b.slipKey || '';
+  showAdhocPaySlipPreview(b.slipKey);
+  openOverlay('overlay-adhoc-pay');
+}
+document.getElementById('btn-upload-adhoc-slip').addEventListener('click', ()=>{
+  document.getElementById('adhoc-pay-slip-file').click();
+});
+document.getElementById('adhoc-pay-slip-file').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ alert('กรุณาเลือกไฟล์รูปภาพ'); return; }
+  if(file.size > 5*1024*1024){ alert('ไฟล์รูปใหญ่เกินไป (จำกัด 5MB)'); return; }
+  const billId = document.getElementById('adhoc-pay-id').value;
+  try{
+    const res = await fetch('/api/adhoc-bills/'+encodeURIComponent(billId)+'/slip', {
+      method: 'POST',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok){ alert(body.error || 'อัปโหลดรูปไม่สำเร็จ'); return; }
+    document.getElementById('adhoc-pay-slip-key').value = body.key;
+    showAdhocPaySlipPreview(body.key);
+  }catch(err){ alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ อัปโหลดรูปไม่สำเร็จ'); }
+});
+document.getElementById('btn-save-adhoc-pay').addEventListener('click', async ()=>{
+  const billId = document.getElementById('adhoc-pay-id').value;
+  const idx = state.adhocBills.findIndex(x=>x.id===billId);
+  if(idx < 0) return;
+  const receiptNo = state.adhocBills[idx].receiptNo || await ensureAdhocReceiptNo(billId);
+  state.adhocBills[idx] = {
+    ...state.adhocBills[idx],
+    paid: true,
+    paidDate: document.getElementById('adhoc-pay-date').value,
+    paidAmount: Number(document.getElementById('adhoc-pay-amount').value) || 0,
+    method: document.getElementById('adhoc-pay-method').value,
+    slipKey: document.getElementById('adhoc-pay-slip-key').value,
+    receiptNo,
+  };
+  const caseId = state.adhocBills[idx].caseId;
+  await saveState();
+  closeOverlay('overlay-adhoc-pay');
+  renderAdhocBillList(caseId);
+  renderBills();
+});
+
+/* ---------- ADHOC BILL DOCUMENTS ---------- */
+async function ensureAdhocInvoiceNo(billId){
+  const b = state.adhocBills.find(x=>x.id===billId);
+  if(!b) return '';
+  if(b.invoiceNo) return b.invoiceNo;
+  const number = await requestDocNumber({ kind: 'adhoc-invoice', billId });
+  if(number) b.invoiceNo = number;
+  return number;
+}
+async function ensureAdhocReceiptNo(billId){
+  const b = state.adhocBills.find(x=>x.id===billId);
+  if(!b) return '';
+  if(b.receiptNo) return b.receiptNo;
+  return await requestDocNumber({ kind: 'adhoc-receipt', billId });
+}
+function adhocDocItemRows(bill, minRows){
+  const rows = (bill.items||[]).map(it=>({desc:it.desc, amount:it.amount}));
+  let html = rows.map(r=>`<tr><td>${escapeHtml(r.desc)}</td><td class="amt">${thb(r.amount)}</td></tr>`).join('');
+  const pad = Math.max((minRows||0) - rows.length, 0);
+  for(let i=0;i<pad;i++) html += `<tr><td>&nbsp;</td><td class="amt">&nbsp;</td></tr>`;
+  return html;
+}
+async function showAdhocInvoice(billId){
+  const b = state.adhocBills.find(x=>x.id===billId);
+  const c = state.cases.find(x=>x.id===b.caseId);
+  const org = orgForCase(c);
+  const {subtotal, discount, net} = computeAdhocBillTotal(b);
+  const invoiceNo = await ensureAdhocInvoiceNo(billId);
+  const fields = `เลขที่เอกสาร:<span class="fval">${invoiceNo}</span><br>
+    ชื่อ/Patient Name:<span class="fval">${escapeHtml(c.name)}</span><br>
+    วันที่/Date:<span class="fval">${b.billDate ? thaiDateLong(new Date(b.billDate+'T00:00:00')) : thaiDateLong(new Date())}</span>`;
+  const discountRow = discount > 0 ? `
+      <tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">ส่วนลด</span><span class="label-th">Discount</span></td>
+        <td class="amt" style="width:150px;">-${thb(discount)}</td>
+      </tr>` : '';
+  currentDocFilename = docFilename('ใบแจ้งยอด-พิเศษ', c.name, invoiceNo);
+  document.getElementById('print-area').innerHTML = `
+    ${letterheadTop('ใบแจ้งยอดชำระ', null, org)}
+    ${letterheadInfo(fields, c)}
+    <div class="lh-title-bar">ใบแจ้งยอดชำระ (บิลพิเศษ)${b.note ? ' — '+escapeHtml(b.note) : ''}</div>
+    <table class="lh-table">
+      <thead><tr>
+        <th>รายการ<span class="en"><br>Description</span></th>
+        <th style="width:150px;">จำนวนเงิน<span class="en"><br>Amount</span></th>
+      </tr></thead>
+      <tbody>${adhocDocItemRows(b, 5)}</tbody>
+    </table>
+    <table class="lh-table" style="border-top:none;">
+      ${discount > 0 ? `<tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">ยอดรวมก่อนหักส่วนลด</span><span class="label-th">Subtotal</span></td>
+        <td class="amt" style="width:150px;">${thb(subtotal)}</td>
+      </tr>` : ''}
+      ${discountRow}
+      <tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงิน</span><span class="label-th">รวมทั้งสิ้น</span></td>
+        <td class="amt" style="width:150px;">${thb(net)}</td>
+      </tr>
+      <tr class="lh-foot-row">
+        <td><span class="en">Total Amount in letters</span><br>${bahtText(net)}</td>
+        <td class="amt" style="width:150px;"><span class="en">Total</span><br>${thb(net)}</td>
+      </tr>
+    </table>
+    ${c.bankName ? `<div class="doc-bank" style="margin-top:12px;">
+      <b>ช่องทางการชำระเงิน</b><br>
+      ธนาคาร ${escapeHtml(c.bankName)} · เลขที่บัญชี ${escapeHtml(c.bankAcc || '—')} · ชื่อบัญชี ${escapeHtml(c.bankOwner || '—')}
+    </div>` : ''}
+    ${letterheadSign(org)}
+  `;
+  openOverlay('overlay-doc');
+}
+function showAdhocReceipt(billId){
+  const b = state.adhocBills.find(x=>x.id===billId);
+  const c = state.cases.find(x=>x.id===b.caseId);
+  const org = orgForCase(c);
+  const {subtotal, discount, net} = computeAdhocBillTotal(b);
+  const amountReceived = (b.paidAmount != null && Math.abs(b.paidAmount - net) > 0.01) ? b.paidAmount : net;
+  const receivedDiffers = Math.abs(amountReceived - net) > 0.01;
+  const fields = `เลขที่เอกสาร:<span class="fval">${b.receiptNo || '—'}</span><br>
+    ชื่อ/Patient Name:<span class="fval">${escapeHtml(c.name)}</span><br>
+    วันที่/Date:<span class="fval">${b.paidDate ? thaiDateLong(new Date(b.paidDate)) : '—'}</span>`;
+  const discountRow = discount > 0 ? `
+      <tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">ส่วนลด</span><span class="label-th">Discount</span></td>
+        <td class="amt" style="width:150px;">-${thb(discount)}</td>
+      </tr>` : '';
+  const receivedRow = receivedDiffers ? `
+      <tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงินที่ได้รับจริง</span><span class="label-th">Received</span></td>
+        <td class="amt" style="width:150px;">${thb(amountReceived)}</td>
+      </tr>` : '';
+  currentDocFilename = docFilename('ใบเสร็จ-พิเศษ', c.name, b.receiptNo);
+  document.getElementById('print-area').innerHTML = `
+    ${letterheadTop('ใบเสร็จรับเงิน', 'green', org)}
+    ${letterheadInfo(fields, c)}
+    <div class="lh-title-bar v-green">ใบเสร็จรับเงิน (Receipt)${b.note ? ' — '+escapeHtml(b.note) : ''}</div>
+    <table class="lh-table">
+      <thead><tr>
+        <th>รายการ<span class="en"><br>Description</span></th>
+        <th style="width:150px;">จำนวนเงิน<span class="en"><br>Amount</span></th>
+      </tr></thead>
+      <tbody>${adhocDocItemRows(b, 5)}</tbody>
+    </table>
+    <table class="lh-table" style="border-top:none;">
+      <tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">ยอดรวมก่อนหักส่วนลด</span><span class="label-th">Subtotal</span></td>
+        <td class="amt" style="width:150px;">${thb(subtotal)}</td>
+      </tr>
+      ${discountRow}
+      <tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงิน</span><span class="label-th">รวมทั้งสิ้น</span></td>
+        <td class="amt" style="width:150px;">${thb(net)}</td>
+      </tr>
+      <tr class="lh-foot-row">
+        <td><span class="en">Total Amount in letters</span><br>${bahtText(net)}</td>
+        <td class="amt" style="width:150px;"><span class="en">Total</span><br>${thb(net)}</td>
+      </tr>
+      ${receivedRow}
+    </table>
+    <div class="lh-sign" style="margin-top:60px;">
+      <div class="lh-sign-box">
+        <div class="lh-sign-line"></div>
+        <div class="lh-sign-name">${escapeHtml((org && org.staff) || '')}</div>
+        <div class="lh-sign-role">เจ้าหน้าที่</div>
+      </div>
+    </div>
+  `;
+  openOverlay('overlay-doc');
+}
+
 /* ---------- SUMMARY VIEW ---------- */
+function isMonthlyFeeIncluded(c, ym){
+  const v = state.feeToggles[key(c.id, ym)];
+  return v === undefined ? true : v; // ค่าเริ่มต้นคือรวมค่าบริการประจำเดือน
+}
 function computeCaseTotal(c, ym){
   const items = state.entries[key(c.id,ym)] || [];
   const other = items.reduce((s,it)=>s+it.amount,0);
-  return { other, total: c.monthlyFee + other };
+  const fee = isMonthlyFeeIncluded(c, ym) ? c.monthlyFee : 0;
+  return { other, total: fee + other };
 }
 function paymentStatus(c, ym){
   const p = state.payments[key(c.id,ym)];
@@ -1452,8 +2477,15 @@ function renderSummary(){
     body.innerHTML = `<div class="empty"><div class="big">ยังไม่มีเคส</div>เพิ่มเคสเพื่อดูสรุปรายเดือน</div>`;
     return;
   }
+  populateBranchFilterSelect('summary-branch-filter');
+  const branchFilter = document.getElementById('summary-branch-filter').value;
+  const cases = (branchFilter ? state.cases.filter(c=>c.branchId===branchFilter) : state.cases).filter(c=>!c.movedOut);
+  if(cases.length === 0){
+    body.innerHTML = `<div class="empty"><div class="big">ไม่มีเคสในสาขาที่เลือก</div>ลองเลือกสาขาอื่น หรือเลือก "ทุกสาขา"</div>`;
+    return;
+  }
   const ym = document.getElementById('summary-month-select').value || currentMonthStr();
-  const rows = state.cases.map(c=>{
+  const rows = cases.map(c=>{
     const {other, total} = computeCaseTotal(c, ym);
     const status = paymentStatus(c, ym);
     const p = state.payments[key(c.id,ym)];
@@ -1485,7 +2517,7 @@ function renderSummary(){
     </tr>`;
   }).join('');
 
-  const grand = state.cases.reduce((s,c)=>s+computeCaseTotal(c,ym).total,0);
+  const grand = cases.reduce((s,c)=>s+computeCaseTotal(c,ym).total,0);
 
   body.innerHTML = `
     <table>
@@ -1519,48 +2551,482 @@ function renderSummary(){
   });
 }
 
+/* ---------- BILLS VIEW (บิลค้างชำระ — รวมบิลรายเดือน + บิลพิเศษระหว่างเดือน) ---------- */
+function renderBills(){
+  const body = document.getElementById('bills-body');
+  if(state.cases.length === 0){
+    body.innerHTML = `<div class="empty"><div class="big">ยังไม่มีเคส</div>เพิ่มเคสเพื่อดูบิลค้างชำระ</div>`;
+    return;
+  }
+  populateBranchFilterSelect('bills-branch-filter');
+  const branchFilter = document.getElementById('bills-branch-filter').value;
+  const cases = (branchFilter ? state.cases.filter(c=>c.branchId===branchFilter) : state.cases).filter(c=>!c.movedOut);
+  const ym = document.getElementById('bills-month-select').value || currentMonthStr();
+
+  const monthlyRows = cases
+    .map(c=>({ kind:'monthly', c, status: paymentStatus(c, ym), total: computeCaseTotal(c, ym).total, dueLabel: dueDateForMonth(c, ym).toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'}) }))
+    .filter(x=>x.status !== 'paid');
+
+  const adhocRows = state.adhocBills
+    .filter(b=>!b.paid)
+    .map(b=>{
+      const c = cases.find(x=>x.id===b.caseId);
+      if(!c) return null;
+      const {net} = computeAdhocBillTotal(b);
+      return { kind:'adhoc', c, bill:b, total: net, dueLabel: b.billDate ? new Date(b.billDate+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—' };
+    })
+    .filter(Boolean);
+
+  const outstanding = monthlyRows.concat(adhocRows);
+
+  if(outstanding.length === 0){
+    body.innerHTML = `<div class="empty"><div class="big">ไม่มีบิลค้างชำระ</div>ทุกบิลในเดือนนี้ชำระเรียบร้อยแล้ว (บิลพิเศษที่ค้างอยู่ก็ไม่มีเช่นกัน)</div>`;
+    return;
+  }
+
+  const rows = outstanding.map(row=>{
+    const { kind, c, total, dueLabel } = row;
+    const tag = kind === 'monthly'
+      ? (row.status==='overdue' ? `<span class="tag tag-overdue">เกินกำหนด</span>` : `<span class="tag tag-due">รอชำระ</span>`)
+      : `<span class="tag tag-due">บิลพิเศษ</span>`;
+    const label = kind === 'monthly' ? 'ครบกำหนด' : 'วันที่ออกบิล';
+    const noteLine = kind === 'adhoc' && row.bill.note ? escapeHtml(row.bill.note)+' · ' : '';
+    const invoiceAttr = kind === 'monthly' ? `data-bill-invoice="${c.id}|${ym}"` : `data-adhoc-bill-invoice="${row.bill.id}"`;
+    const confirmAttr = kind === 'monthly' ? `data-bill-confirm="${c.id}|${ym}"` : `data-adhoc-bill-confirm="${row.bill.id}"`;
+    return `<tr class="row-hover">
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="avatar" style="width:30px;height:30px;font-size:12px;background:${colorFor(c.id)}">${initials(c.name).toUpperCase()}</div>
+          <div>
+            <div style="font-weight:500;">${escapeHtml(c.name)}</div>
+            <div style="font-size:11.5px;color:var(--ink-soft);">${c.branchId ? escapeHtml(branchName(c.branchId))+' · ' : ''}${noteLine}${label} ${dueLabel}</div>
+          </div>
+        </div>
+      </td>
+      <td class="num" style="font-weight:600;">${thb(total)}</td>
+      <td>${tag}</td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-sm" ${invoiceAttr}>ใบเรียกเก็บ</button>
+          <button class="btn btn-sm btn-primary" ${confirmAttr}>ยืนยันการชำระ</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const grandOutstanding = outstanding.reduce((s,x)=>s+x.total,0);
+
+  body.innerHTML = `
+    <table>
+      <thead><tr><th>เคส</th><th>ยอดที่ต้องชำระ</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="text-align:right;margin-top:12px;font-size:14px;color:var(--ink-soft);">
+      ยอดค้างชำระรวม &nbsp; <b style="color:var(--ink);font-size:16px;">${thb(grandOutstanding)}</b>
+    </div>
+  `;
+
+  body.querySelectorAll('[data-bill-invoice]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const [cid,m] = b.dataset.billInvoice.split('|');
+      showInvoice(cid, m);
+    });
+  });
+  body.querySelectorAll('[data-bill-confirm]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const [cid,m] = b.dataset.billConfirm.split('|');
+      openPayForm(cid, m);
+    });
+  });
+  body.querySelectorAll('[data-adhoc-bill-invoice]').forEach(b=>{
+    b.addEventListener('click', ()=> showAdhocInvoice(b.dataset.adhocBillInvoice));
+  });
+  body.querySelectorAll('[data-adhoc-bill-confirm]').forEach(b=>{
+    b.addEventListener('click', ()=> openAdhocPayForm(b.dataset.adhocBillConfirm));
+  });
+}
+
+/* ---------- DOCS SUMMARY VIEW (สรุปใบแจ้งยอด/ใบเสร็จที่ออกเลขที่เอกสารแล้ว แยกตามสาขา/เดือน) ---------- */
+function renderDocsSummary(){
+  const body = document.getElementById('docs-summary-body');
+  if(state.cases.length === 0){
+    body.innerHTML = `<div class="empty"><div class="big">ยังไม่มีเคส</div>เพิ่มเคสเพื่อดูสรุปเอกสาร</div>`;
+    return;
+  }
+  populateBranchFilterSelect('docs-summary-branch-filter');
+  const branchFilter = document.getElementById('docs-summary-branch-filter').value;
+  const ym = document.getElementById('docs-summary-month').value || currentMonthStr();
+  const caseById = {};
+  state.cases.forEach(c=>{ caseById[c.id] = c; });
+  const caseInBranch = c => c && (!branchFilter || c.branchId === branchFilter);
+
+  const invoiceRows = [];
+  const receiptRows = [];
+
+  // บิลรายเดือน — ใบแจ้งยอดอิงตามรอบบิล (ym), ใบเสร็จอิงตามวันที่ชำระจริง (paidDate)
+  Object.keys(state.payments).forEach(k=>{
+    const [caseId, payYm] = k.split('|');
+    const c = caseById[caseId];
+    if(!caseInBranch(c)) return;
+    const p = state.payments[k];
+    if(payYm === ym && p.invoiceNo){
+      invoiceRows.push({ no: p.invoiceNo, caseName: c.name, branchId: c.branchId, date: thaiMonthYearLabel(payYm), amount: computeCaseTotal(c, payYm).total });
+    }
+    if(p.receiptNo && p.paidDate && p.paidDate.slice(0,7) === ym){
+      const discount = p.discount || 0;
+      const net = Math.max(computeCaseTotal(c, payYm).total - discount, 0);
+      receiptRows.push({ no: p.receiptNo, caseName: c.name, branchId: c.branchId, date: p.paidDate, amount: p.paidAmount ?? net });
+    }
+  });
+
+  // บิลพิเศษระหว่างเดือน — ใบแจ้งยอดอิงตามวันที่ออกบิล, ใบเสร็จอิงตามวันที่ชำระจริง
+  state.adhocBills.forEach(b=>{
+    const c = caseById[b.caseId];
+    if(!caseInBranch(c)) return;
+    const { net } = computeAdhocBillTotal(b);
+    if(b.invoiceNo && b.billDate && b.billDate.slice(0,7) === ym){
+      invoiceRows.push({ no: b.invoiceNo, caseName: c.name, branchId: c.branchId, date: b.billDate, amount: net });
+    }
+    if(b.receiptNo && b.paidDate && b.paidDate.slice(0,7) === ym){
+      receiptRows.push({ no: b.receiptNo, caseName: c.name, branchId: c.branchId, date: b.paidDate, amount: b.paidAmount ?? net });
+    }
+  });
+
+  invoiceRows.sort((a,b)=> (a.no||'').localeCompare(b.no||''));
+  receiptRows.sort((a,b)=> (a.no||'').localeCompare(b.no||''));
+
+  const fmtDate = d => {
+    if(!d) return '—';
+    if(/^\d{4}-\d{2}-\d{2}/.test(d)) return new Date(d.slice(0,10)+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'});
+    return d; // เช่นข้อความเดือน/ปีจาก thaiMonthYearLabel
+  };
+
+  const buildTable = (rows, emptyLabel) => {
+    if(rows.length === 0) return `<div class="empty" style="padding:20px 0;"><div class="big" style="font-size:14px;">${emptyLabel}</div></div>`;
+    const total = rows.reduce((s,r)=>s+(r.amount||0),0);
+    return `
+      <table>
+        <thead><tr><th>เลขที่เอกสาร</th><th>เคส</th><th>สาขา</th><th>วันที่</th><th>ยอดเงิน</th></tr></thead>
+        <tbody>${rows.map(r=>`
+          <tr>
+            <td>${escapeHtml(r.no)}</td>
+            <td>${escapeHtml(r.caseName)}</td>
+            <td>${r.branchId ? escapeHtml(branchName(r.branchId)) : '—'}</td>
+            <td>${escapeHtml(fmtDate(r.date))}</td>
+            <td class="num">${thb(r.amount)}</td>
+          </tr>
+        `).join('')}</tbody>
+      </table>
+      <div style="text-align:right;margin-top:10px;font-size:14px;color:var(--ink-soft);">
+        ยอดรวม &nbsp; <b style="color:var(--ink);font-size:16px;">${thb(total)}</b> &nbsp; (${rows.length} ฉบับ)
+      </div>`;
+  };
+
+  body.innerHTML = `
+    <div class="summary-card" style="margin-bottom:16px;">
+      <h3 style="margin:0 0 12px;">ใบแจ้งยอดที่ออกในเดือนนี้</h3>
+      ${buildTable(invoiceRows, 'ยังไม่มีใบแจ้งยอดที่ออกเลขที่เอกสารในเดือนนี้')}
+    </div>
+    <div class="summary-card">
+      <h3 style="margin:0 0 12px;">ใบเสร็จที่ออกในเดือนนี้</h3>
+      ${buildTable(receiptRows, 'ยังไม่มีใบเสร็จที่ออกเลขที่เอกสารในเดือนนี้')}
+    </div>
+  `;
+}
+
+/* ---------- CALENDAR VIEW (ภาพรวมวันครบกำหนดชำระ — เห็นได้ทุกบทบาท ตามสาขาที่มีสิทธิ์เข้าถึง) ---------- */
+function renderCalendar(){
+  const body = document.getElementById('calendar-body');
+  if(state.cases.length === 0){
+    body.innerHTML = `<div class="empty"><div class="big">ยังไม่มีเคส</div>เพิ่มเคสเพื่อดูปฏิทินครบกำหนดชำระ</div>`;
+    return;
+  }
+  populateBranchFilterSelect('calendar-branch-filter');
+  const branchFilter = document.getElementById('calendar-branch-filter').value;
+  const ym = document.getElementById('calendar-month-select').value || currentMonthStr();
+  const cases = (branchFilter ? state.cases.filter(c=>c.branchId===branchFilter) : state.cases).filter(c=>!c.movedOut);
+
+  const [y,m] = ym.split('-').map(Number);
+  const total = daysInMonth(y,m);
+  const firstDow = new Date(y, m-1, 1).getDay(); // 0 = อาทิตย์
+  const todayStr = new Date().toISOString().slice(0,10);
+
+  const byDay = {};
+  cases.forEach(c=>{
+    const due = dueDateForMonth(c, ym);
+    const status = paymentStatus(c, ym);
+    (byDay[due.getDate()] ||= []).push({ c, status });
+  });
+
+  const caseIds = new Set(cases.map(c=>c.id));
+  const apptByDay = {};
+  (state.appointments || []).forEach(a=>{
+    if(!caseIds.has(a.caseId) || !a.date || a.date.slice(0,7) !== ym) return;
+    const d = parseInt(a.date.slice(8,10), 10);
+    (apptByDay[d] ||= []).push(a);
+  });
+  const caseById = {};
+  cases.forEach(c=>{ caseById[c.id] = c; });
+
+  const dowLabels = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+  let cells = dowLabels.map(l=>`<div class="cal-dow">${l}</div>`).join('');
+  for(let i=0;i<firstDow;i++) cells += `<div class="cal-cell empty"></div>`;
+  for(let d=1; d<=total; d++){
+    const dateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = dateStr === todayStr;
+    const dayEntries = byDay[d] || [];
+    const dayAppts = apptByDay[d] || [];
+    const dueChips = dayEntries.map(({c,status})=>{
+      const cls = status === 'paid' ? 'tag-paid' : status === 'overdue' ? 'tag-overdue' : 'tag-due';
+      return `<span class="cal-case-chip ${cls}" data-cal-case="${c.id}" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</span>`;
+    }).join('');
+    const apptChips = dayAppts.map(a=>{
+      const c = caseById[a.caseId];
+      const label = (c ? c.name : '?') + (a.note ? ' — '+a.note : '');
+      const cancelled = a.status === 'cancelled';
+      return `<span class="cal-appt-chip${cancelled?' cancelled':''}" data-cal-appt="${a.id}" title="${escapeHtml(label)}">🩺 ${escapeHtml(label)}</span>`;
+    }).join('');
+    cells += `<div class="cal-cell${isToday ? ' today' : ''}"><div class="cal-daynum">${d}</div>${dueChips}${apptChips}</div>`;
+  }
+
+  body.innerHTML = `
+    <div style="text-align:center;font-weight:600;margin-bottom:10px;">${thaiMonthYearLabel(ym)}</div>
+    <div class="cal-grid">${cells}</div>
+  `;
+
+  body.querySelectorAll('[data-cal-case]').forEach(chip=>{
+    chip.addEventListener('click', ()=> openPayForm(chip.dataset.calCase, ym));
+  });
+  body.querySelectorAll('[data-cal-appt]').forEach(chip=>{
+    chip.addEventListener('click', ()=> openAppointmentForm(chip.dataset.calAppt));
+  });
+}
+
+/* ---------- นัดหมอ (APPOINTMENTS) — เพิ่ม/แก้ไข/ยกเลิก/ลบ ---------- */
+function populateAppointmentCaseSelect(selected){
+  const sel = document.getElementById('appointment-case');
+  const activeCases = state.cases.filter(c=>!c.movedOut);
+  if(activeCases.length === 0){
+    sel.innerHTML = `<option value="">— ยังไม่มีเคส —</option>`;
+    return;
+  }
+  const groups = state.orgs.map(o=>{
+    const branchIds = state.branches.filter(b=>b.orgId===o.id).map(b=>b.id);
+    const casesInOrg = activeCases.filter(c=>branchIds.includes(c.branchId));
+    if(casesInOrg.length === 0) return '';
+    return `<optgroup label="${escapeHtml(o.name)}">${casesInOrg.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</optgroup>`;
+  }).join('');
+  sel.innerHTML = groups || activeCases.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  if(selected) sel.value = selected;
+}
+
+function openAppointmentForm(appointmentId, defaults){
+  const a = appointmentId ? (state.appointments||[]).find(x=>x.id===appointmentId) : null;
+  document.getElementById('appointment-form-error').style.display = 'none';
+  document.getElementById('appointment-modal-title').textContent = a ? 'แก้ไขนัดหมอ' : 'เพิ่มนัดหมอ';
+  document.getElementById('appointment-id').value = a ? a.id : '';
+  populateAppointmentCaseSelect(a ? a.caseId : (defaults && defaults.caseId));
+  document.getElementById('appointment-date').value = a ? a.date : ((defaults && defaults.date) || new Date().toISOString().slice(0,10));
+  document.getElementById('appointment-note').value = a ? a.note : '';
+
+  const statusNote = document.getElementById('appointment-status-note');
+  const toggleBtn = document.getElementById('btn-toggle-cancel-appointment');
+  const deleteBtn = document.getElementById('btn-delete-appointment');
+  if(a){
+    deleteBtn.style.display = '';
+    toggleBtn.style.display = '';
+    if(a.status === 'cancelled'){
+      statusNote.style.display = '';
+      statusNote.textContent = 'นัดนี้ถูกยกเลิกแล้ว — กด "กู้คืนนัดนี้" เพื่อเปลี่ยนกลับเป็นนัดปกติ';
+      toggleBtn.textContent = 'กู้คืนนัดนี้';
+    } else {
+      statusNote.style.display = 'none';
+      toggleBtn.textContent = 'ยกเลิกนัดนี้';
+    }
+  } else {
+    deleteBtn.style.display = 'none';
+    toggleBtn.style.display = 'none';
+    statusNote.style.display = 'none';
+  }
+  openOverlay('overlay-appointment');
+}
+document.getElementById('btn-add-appointment').addEventListener('click', ()=> openAppointmentForm(null));
+
+document.getElementById('btn-save-appointment').addEventListener('click', async ()=>{
+  const errBox = document.getElementById('appointment-form-error');
+  errBox.style.display = 'none';
+  const id = document.getElementById('appointment-id').value;
+  const caseId = document.getElementById('appointment-case').value;
+  const date = document.getElementById('appointment-date').value;
+  const note = document.getElementById('appointment-note').value.trim();
+  if(!caseId){ errBox.textContent = 'กรุณาเลือกเคส'; errBox.style.display = ''; return; }
+  if(!date){ errBox.textContent = 'กรุณาระบุวันที่นัด'; errBox.style.display = ''; return; }
+
+  if(!state.appointments) state.appointments = [];
+  const idx = id ? state.appointments.findIndex(x=>x.id===id) : -1;
+  if(idx >= 0){
+    state.appointments[idx] = { ...state.appointments[idx], caseId, date, note };
+  } else {
+    state.appointments.push({ id: uid(), caseId, date, note, status: 'scheduled' });
+  }
+  await saveState();
+  closeOverlay('overlay-appointment');
+  renderCalendar();
+  renderApptReminderBanner();
+});
+
+document.getElementById('btn-toggle-cancel-appointment').addEventListener('click', async ()=>{
+  const id = document.getElementById('appointment-id').value;
+  const idx = (state.appointments||[]).findIndex(x=>x.id===id);
+  if(idx < 0) return;
+  state.appointments[idx].status = state.appointments[idx].status === 'cancelled' ? 'scheduled' : 'cancelled';
+  await saveState();
+  closeOverlay('overlay-appointment');
+  renderCalendar();
+  renderApptReminderBanner();
+});
+
+document.getElementById('btn-delete-appointment').addEventListener('click', async ()=>{
+  const id = document.getElementById('appointment-id').value;
+  const a = (state.appointments||[]).find(x=>x.id===id);
+  if(!a) return;
+  if(!confirm('ยืนยันลบนัดนี้ถาวร? (ถ้าต้องการเก็บประวัติไว้ แนะนำให้กด "ยกเลิกนัดนี้" แทน)')) return;
+  state.appointments = (state.appointments||[]).filter(x=>x.id!==id);
+  await saveState();
+  closeOverlay('overlay-appointment');
+  renderCalendar();
+  renderApptReminderBanner();
+});
+
 /* ---------- PAYMENT MODAL ---------- */
+function showPaySlipPreview(key){
+  const box = document.getElementById('pay-slip-preview');
+  if(key){
+    box.innerHTML = `<img src="/api/photo/${encodeURIComponent(key)}" style="max-width:100%;max-height:160px;object-fit:contain;">`;
+  } else {
+    box.innerHTML = 'ยังไม่มีรูป';
+  }
+}
+let currentPayTotal = 0;
 function openPayForm(caseId, ym){
   const c = state.cases.find(x=>x.id===caseId);
   const {total} = computeCaseTotal(c, ym);
+  currentPayTotal = total;
+  const existing = state.payments[key(caseId, ym)] || {};
+  const discount = existing.discount || 0;
   document.getElementById('pay-key').value = key(caseId, ym);
-  document.getElementById('pay-date').value = new Date().toISOString().slice(0,10);
-  document.getElementById('pay-amount').value = total;
-  document.getElementById('pay-method').value = 'โอนเงินผ่านธนาคาร';
+  document.getElementById('pay-date').value = existing.paidDate || new Date().toISOString().slice(0,10);
+  document.getElementById('pay-amount').value = existing.paidAmount ?? Math.max(total - discount, 0);
+  document.getElementById('pay-method').value = existing.method || 'โอนเงินผ่านธนาคาร';
+  document.getElementById('pay-discount').value = discount;
+  document.getElementById('pay-slip-key').value = existing.slipKey || '';
+  showPaySlipPreview(existing.slipKey);
+  document.getElementById('pay-total-hint').textContent = `ยอดเต็มก่อนหักส่วนลด ${thb(total)}`;
   openOverlay('overlay-pay');
 }
+document.getElementById('pay-discount').addEventListener('input', ()=>{
+  const discount = Number(document.getElementById('pay-discount').value) || 0;
+  document.getElementById('pay-amount').value = Math.max(currentPayTotal - discount, 0);
+  document.getElementById('pay-total-hint').textContent = `ยอดเต็มก่อนหักส่วนลด ${thb(currentPayTotal)} — หลังหักส่วนลด ${thb(Math.max(currentPayTotal-discount,0))}`;
+});
+document.getElementById('btn-upload-slip').addEventListener('click', ()=>{
+  document.getElementById('pay-slip-file').click();
+});
+document.getElementById('pay-slip-file').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ alert('กรุณาเลือกไฟล์รูปภาพ'); return; }
+  if(file.size > 5*1024*1024){ alert('ไฟล์รูปใหญ่เกินไป (จำกัด 5MB)'); return; }
+  const k = document.getElementById('pay-key').value;
+  const [caseId, ym] = k.split('|');
+  try{
+    const res = await fetch('/api/payments/'+encodeURIComponent(caseId)+'/'+encodeURIComponent(ym)+'/slip', {
+      method: 'POST',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok){ alert(body.error || 'อัปโหลดรูปไม่สำเร็จ'); return; }
+    document.getElementById('pay-slip-key').value = body.key;
+    showPaySlipPreview(body.key);
+  }catch(err){ alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ อัปโหลดรูปไม่สำเร็จ'); }
+});
 document.getElementById('btn-save-pay').addEventListener('click', async ()=>{
   const k = document.getElementById('pay-key').value;
   const [caseId, ym] = k.split('|');
   const existing = state.payments[k] || {};
+  const receiptNo = existing.receiptNo || await ensureReceiptNo(caseId, ym);
   state.payments[k] = {
     ...existing,
     paid: true,
     paidDate: document.getElementById('pay-date').value,
     paidAmount: Number(document.getElementById('pay-amount').value) || 0,
     method: document.getElementById('pay-method').value,
-    receiptNo: existing.receiptNo || ('RCT-'+ym.replace('-','')+'-'+caseId.slice(-4).toUpperCase()),
+    discount: Number(document.getElementById('pay-discount').value) || 0,
+    slipKey: document.getElementById('pay-slip-key').value,
+    receiptNo,
   };
   await saveState();
   closeOverlay('overlay-pay');
   renderSummary();
+  renderBills();
 });
 
 /* ---------- INVOICE / RECEIPT DOCUMENTS ---------- */
-function ensureInvoiceNo(caseId, ym){
+// ขอเลขที่เอกสารจากเซิร์ฟเวอร์ (รันต่อเนื่องแยกตามสาขา/ประเภท/ปี — กันเลขซ้ำและกันรันจากฝั่งเว็บเอง)
+async function requestDocNumber(payload){
+  try{
+    const res = await fetch('/api/doc-number', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok){ alert(body.error || 'ออกเลขที่เอกสารไม่สำเร็จ'); return ''; }
+    return body.number || '';
+  }catch(e){ alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ออกเลขที่เอกสารไม่สำเร็จ'); return ''; }
+}
+async function ensureInvoiceNo(caseId, ym){
   const k = key(caseId, ym);
-  if(!state.payments[k]) state.payments[k] = {};
-  if(!state.payments[k].invoiceNo){
-    state.payments[k].invoiceNo = 'INV-'+ym.replace('-','')+'-'+caseId.slice(-4).toUpperCase();
-    saveState();
+  const existing = state.payments[k] && state.payments[k].invoiceNo;
+  if(existing) return existing;
+  const number = await requestDocNumber({ kind: 'monthly-invoice', caseId, ym });
+  if(number){
+    if(!state.payments[k]) state.payments[k] = {};
+    state.payments[k].invoiceNo = number;
   }
-  return state.payments[k].invoiceNo;
+  return number;
+}
+async function ensureReceiptNo(caseId, ym){
+  const k = key(caseId, ym);
+  const existing = state.payments[k] && state.payments[k].receiptNo;
+  if(existing) return existing;
+  return await requestDocNumber({ kind: 'monthly-receipt', caseId, ym });
 }
 
+// รวมรายการ "ค่าบริการเจ้าหน้าที่พาไปพบแพทย์" หลายวันในเดือนเดียวกัน ให้แสดงเป็นบรรทัดเดียวตอนออกเอกสาร
+// เช่น ไปวันที่ 2, 15 และ 25 เม.ย. 69 (3 ครั้ง) จะรวมยอดแล้วแสดง "วันที่ 2, 15 และ 25 เม.ย. 69 จำนวน 3 วัน"
+// (รายการต้นฉบับในหน้าบันทึกค่าใช้จ่ายยังคงแยกเป็นรายวันตามเดิม แก้ไข/ลบทีละรายการได้ปกติ — รวมเฉพาะตอนแสดงผลในเอกสารเท่านั้น)
+function consolidateEscortForDoc(items, ym){
+  const escortItems = items.filter(it=>it.category === 'escort');
+  const otherRows = items.filter(it=>it.category !== 'escort').map(it=>({desc: it.desc, amount: it.amount}));
+  if(escortItems.length === 0) return otherRows;
+  if(escortItems.length === 1) return otherRows.concat({desc: escortItems[0].desc, amount: escortItems[0].amount});
+
+  const total = escortItems.reduce((s,it)=>s+it.amount,0);
+  const days = escortItems.map(it=>it.date).filter(Boolean).map(d=>parseInt(d.slice(8,10),10)).sort((a,b)=>a-b);
+  let desc = entryCategoryLabel('escort');
+  if(days.length){
+    const daysJoined = days.length === 1 ? String(days[0]) : days.slice(0,-1).join(', ') + ' และ ' + days[days.length-1];
+    desc += ` — วันที่ ${daysJoined} ${thaiMonthYearLabel(ym)} จำนวน ${days.length} วัน`;
+  }
+  return otherRows.concat({desc, amount: total});
+}
 function docItemRows(c, ym, minRows){
   const items = state.entries[key(c.id,ym)] || [];
-  const rows = [{desc: 'ค่าบริการรายเดือน — ' + monthLabel(ym), amount: c.monthlyFee}]
-    .concat(items.map(it=>({desc: it.desc, amount: it.amount})));
+  const feeRow = isMonthlyFeeIncluded(c, ym) ? [{desc: monthlyFeePeriodLabel(c, ym), amount: c.monthlyFee}] : [];
+  const rows = feeRow.concat(consolidateEscortForDoc(items, ym));
   let html = rows.map(r=>`<tr><td>${escapeHtml(r.desc)}</td><td class="amt">${thb(r.amount)}</td></tr>`).join('');
   const pad = Math.max((minRows||0) - rows.length, 0);
   for(let i=0;i<pad;i++) html += `<tr><td>&nbsp;</td><td class="amt">&nbsp;</td></tr>`;
@@ -1608,7 +3074,9 @@ function letterheadTop(cornerLabel, variant, org){
       <div style="flex:1;"></div>
       <div class="lh-logo-wrap">
         <div class="lh-logo">
-          <span class="mark">${escapeHtml((org && org.logo) || 'LOGO')}</span>
+          ${org && org.logoKey
+            ? `<img src="/api/photo/${encodeURIComponent(org.logoKey)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+            : `<span class="mark">${escapeHtml((org && org.logo) || 'LOGO')}</span>`}
         </div>
       </div>
       <div style="flex:1;display:flex;justify-content:flex-end;">
@@ -1645,14 +3113,15 @@ function orgForCase(caseObj){
   return branch ? state.orgs.find(o=>o.id===branch.orgId) : null;
 }
 
-function showInvoice(caseId, ym){
+async function showInvoice(caseId, ym){
   const c = state.cases.find(x=>x.id===caseId);
   const org = orgForCase(c);
   const {total} = computeCaseTotal(c, ym);
-  const invoiceNo = ensureInvoiceNo(caseId, ym);
+  const invoiceNo = await ensureInvoiceNo(caseId, ym);
   const fields = `เลขที่เอกสาร:<span class="fval">${invoiceNo}</span><br>
     ชื่อ/Patient Name:<span class="fval">${escapeHtml(c.name)}</span><br>
     วันที่/Date:<span class="fval">${thaiDateLong(new Date())}</span>`;
+  currentDocFilename = docFilename('ใบแจ้งยอด', c.name, invoiceNo);
   document.getElementById('print-area').innerHTML = `
     ${letterheadTop('ใบแจ้งยอดชำระ', null, org)}
     ${letterheadInfo(fields, c)}
@@ -1662,7 +3131,7 @@ function showInvoice(caseId, ym){
         <th>รายการ<span class="en"><br>Description</span></th>
         <th style="width:150px;">จำนวนเงิน<span class="en"><br>Amount</span></th>
       </tr></thead>
-      <tbody>${docItemRows(c, ym, 8)}</tbody>
+      <tbody>${docItemRows(c, ym, 5)}</tbody>
     </table>
     <table class="lh-table" style="border-top:none;">
       <tr class="lh-foot-row">
@@ -1690,10 +3159,25 @@ function showReceipt(caseId, ym){
   const org = orgForCase(c);
   const p = state.payments[key(caseId,ym)] || {};
   const {total} = computeCaseTotal(c, ym);
-  const amountReceived = p.paidAmount ?? total;
+  const discount = p.discount || 0;
+  // ยอดสุทธิที่ต้องแสดงในใบเสร็จ = ยอดรวมก่อนหักลบด้วยส่วนลดเสมอ (ไม่พึ่งพา paidAmount ที่อาจบันทึกไว้คลาดเคลื่อน)
+  const netTotal = Math.max(total - discount, 0);
+  const amountReceived = (p.paidAmount != null && Math.abs(p.paidAmount - netTotal) > 0.01) ? p.paidAmount : netTotal;
+  const receivedDiffers = Math.abs(amountReceived - netTotal) > 0.01;
   const fields = `เลขที่เอกสาร:<span class="fval">${p.receiptNo || '—'}</span><br>
     ชื่อ/Patient Name:<span class="fval">${escapeHtml(c.name)}</span><br>
     วันที่/Date:<span class="fval">${p.paidDate ? thaiDateLong(new Date(p.paidDate)) : '—'}</span>`;
+  const discountRow = discount > 0 ? `
+      <tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">ส่วนลด</span><span class="label-th">Discount</span></td>
+        <td class="amt" style="width:150px;">-${thb(discount)}</td>
+      </tr>` : '';
+  const receivedRow = receivedDiffers ? `
+      <tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงินที่ได้รับจริง</span><span class="label-th">Received</span></td>
+        <td class="amt" style="width:150px;">${thb(amountReceived)}</td>
+      </tr>` : '';
+  currentDocFilename = docFilename('ใบเสร็จ', c.name, p.receiptNo);
   document.getElementById('print-area').innerHTML = `
     ${letterheadTop('ใบเสร็จรับเงิน', 'green', org)}
     ${letterheadInfo(fields, c)}
@@ -1703,17 +3187,23 @@ function showReceipt(caseId, ym){
         <th>รายการ<span class="en"><br>Description</span></th>
         <th style="width:150px;">จำนวนเงิน<span class="en"><br>Amount</span></th>
       </tr></thead>
-      <tbody>${docItemRows(c, ym, 8)}</tbody>
+      <tbody>${docItemRows(c, ym, 5)}</tbody>
     </table>
     <table class="lh-table" style="border-top:none;">
       <tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">ยอดรวมก่อนหักส่วนลด</span><span class="label-th">Subtotal</span></td>
+        <td class="amt" style="width:150px;">${thb(total)}</td>
+      </tr>
+      ${discountRow}
+      <tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงิน</span><span class="label-th">รวมทั้งสิ้น</span></td>
-        <td class="amt" style="width:150px;">${thb(amountReceived)}</td>
+        <td class="amt" style="width:150px;">${thb(netTotal)}</td>
       </tr>
       <tr class="lh-foot-row">
-        <td><span class="en">Total Amount in letters</span><br>${bahtText(amountReceived)}</td>
-        <td class="amt" style="width:150px;"><span class="en">Total</span><br>${thb(amountReceived)}</td>
+        <td><span class="en">Total Amount in letters</span><br>${bahtText(netTotal)}</td>
+        <td class="amt" style="width:150px;"><span class="en">Total</span><br>${thb(netTotal)}</td>
       </tr>
+      ${receivedRow}
     </table>
     <div class="lh-sign" style="margin-top:60px;">
       <div class="lh-sign-box">
@@ -1727,6 +3217,60 @@ function showReceipt(caseId, ym){
 }
 
 document.getElementById('btn-print-doc').addEventListener('click', ()=> window.print());
+
+/* ---------- ดาวน์โหลดเอกสารเป็นไฟล์ JPG ---------- */
+let currentDocFilename = 'document';
+function docFilename(prefix, caseName, docNo){
+  const parts = [prefix, caseName, docNo].filter(Boolean).map(s=>String(s).trim().replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,'_'));
+  return parts.join('_') || 'document';
+}
+document.getElementById('btn-download-jpg-doc').addEventListener('click', async ()=>{
+  const btn = document.getElementById('btn-download-jpg-doc');
+  const area = document.getElementById('print-area');
+  if(typeof html2canvas === 'undefined'){
+    alert('ไม่สามารถโหลดเครื่องมือสร้างไฟล์ JPG ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่');
+    return;
+  }
+  const originalLabel = btn.textContent;
+  btn.textContent = 'กำลังสร้างไฟล์...';
+  btn.disabled = true;
+  try{
+    const canvas = await html2canvas(area, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+    const filename = currentDocFilename + '.jpg';
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+
+    // มือถือ (iOS/Android) ที่รองรับ Web Share API แบบแชร์ไฟล์ได้ — จะเปิดหน้าต่างแชร์ของเครื่อง
+    // ให้เลือก "บันทึกรูปภาพ" / "Save Image" / "Save to Photos" เพื่อเก็บเข้า Gallery ได้โดยตรง
+    let shared = false;
+    if(navigator.canShare){
+      try{
+        const file = new File([blob], filename, { type: 'image/jpeg' });
+        if(navigator.canShare({ files: [file] })){
+          await navigator.share({ files: [file], title: filename });
+          shared = true;
+        }
+      }catch(shareErr){
+        if(shareErr && shareErr.name === 'AbortError') shared = true; // ผู้ใช้กดยกเลิกการแชร์เอง ไม่ต้อง fallback ไปดาวน์โหลดซ้ำ
+      }
+    }
+    if(!shared){
+      // เดสก์ท็อป หรือเบราว์เซอร์ที่ไม่รองรับ Web Share — ดาวน์โหลดเป็นไฟล์ตามปกติ (ปกติจะไปอยู่ในโฟลเดอร์ดาวน์โหลด ไม่ใช่ Gallery โดยตรง)
+      const dataUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=> URL.revokeObjectURL(dataUrl), 10000);
+    }
+  }catch(e){
+    alert('สร้างไฟล์ JPG ไม่สำเร็จ ลองใหม่อีกครั้ง');
+  }finally{
+    btn.textContent = originalLabel;
+    btn.disabled = false;
+  }
+});
 
 /* ---------- USERS (admin only) ---------- */
 let users = [];
@@ -1756,23 +3300,36 @@ function renderUserList(){
     list.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);margin:4px 0;">ยังไม่มีผู้ใช้</p>`;
     return;
   }
-  list.innerHTML = users.map(u=>`
+  list.innerHTML = users.map(u=>{
+    const roleLabel = u.role === 'admin' ? 'ผู้ดูแลระบบ' : u.role === 'manager' ? 'ผู้จัดการ' : 'พนักงานสาขา';
+    let scopeLabel = 'เข้าถึงได้ทุกองค์กร/สาขา';
+    if(u.role === 'staff' || u.role === 'manager'){
+      // ผู้ใช้ที่กำหนดผ่านตาราง user_branch_access แล้วจะมี u.branchIds — ถ้าเป็นบัญชี staff เก่าที่ยังผูกสาขาเดี่ยวแบบเดิมจะ fallback ไปใช้ u.branchId แทน
+      const ids = (u.branchIds && u.branchIds.length) ? u.branchIds : (u.branchId ? [u.branchId] : []);
+      const names = ids.map(id=>branchName(id)).filter(Boolean);
+      scopeLabel = names.length ? escapeHtml(names.join(', ')) : 'ยังไม่ได้กำหนดสาขา';
+    }
+    return `
     <div class="entry-row">
       <span class="entry-desc">
         <b>${escapeHtml(u.displayName || u.username)}</b>
         <span style="color:var(--ink-soft);font-size:12px;"> (${escapeHtml(u.username)})</span><br>
-        <span class="role-badge" style="margin-right:6px;">${u.role === 'admin' ? 'ผู้ดูแลระบบ' : 'พนักงานสาขา'}</span>
-        <span style="color:var(--ink-faint,var(--ink-soft));font-size:12px;">${u.role === 'staff' ? escapeHtml(orgName(u.orgId)) + (u.branchId ? ' — ' + escapeHtml(branchName(u.branchId)) : '') : 'เข้าถึงได้ทุกองค์กร/สาขา'}</span>
+        <span class="role-badge" style="margin-right:6px;">${roleLabel}</span>
+        <span style="color:var(--ink-faint,var(--ink-soft));font-size:12px;">${scopeLabel}</span>
       </span>
+      ${(u.role === 'manager' || u.role === 'staff') ? `<button class="btn btn-sm" data-manage-access="${u.id}">จัดการสิทธิ์</button>` : ''}
       <button class="btn btn-sm" data-reset-user="${u.id}">รีเซ็ตรหัสผ่าน</button>
       <button class="btn btn-sm btn-danger" data-delete-user="${u.id}">ลบ</button>
     </div>
-  `).join('');
+  `;}).join('');
   list.querySelectorAll('[data-reset-user]').forEach(btn=>{
     btn.addEventListener('click', ()=> openResetPasswordForm(btn.dataset.resetUser));
   });
   list.querySelectorAll('[data-delete-user]').forEach(btn=>{
     btn.addEventListener('click', ()=> deleteUser(btn.dataset.deleteUser));
+  });
+  list.querySelectorAll('[data-manage-access]').forEach(btn=>{
+    btn.addEventListener('click', ()=> openManagerAccessForm(btn.dataset.manageAccess));
   });
 }
 
@@ -1788,9 +3345,36 @@ function populateUserBranchSelect(){
     ? branches.map(b=>`<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('')
     : `<option value="">— สาขานี้ยังไม่มี —</option>`;
 }
+function renderBranchCheckboxList(containerId, checkedIds){
+  const container = document.getElementById(containerId);
+  if(!state.branches.length){
+    container.innerHTML = `<p style="font-size:12.5px;color:var(--ink-soft);margin:2px 0;">ยังไม่มีสาขาในระบบ</p>`;
+    return;
+  }
+  const checked = new Set(checkedIds || []);
+  const byOrg = {};
+  state.branches.forEach(b=>{ (byOrg[b.orgId] ||= []).push(b); });
+  container.innerHTML = Object.keys(byOrg).map(orgId=>`
+    <div style="margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:4px;">${escapeHtml(orgName(orgId))}</div>
+      ${byOrg[orgId].map(b=>`
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:2px 0;">
+          <input type="checkbox" value="${b.id}" ${checked.has(b.id)?'checked':''}> ${escapeHtml(b.name)}
+        </label>
+      `).join('')}
+    </div>
+  `).join('');
+}
+function getCheckedBranchIds(containerId){
+  return [...document.querySelectorAll('#'+containerId+' input[type=checkbox]:checked')].map(cb=>cb.value);
+}
 function toggleUserOrgBranchFields(){
   const role = document.getElementById('user-role').value;
-  document.getElementById('user-org-branch-fields').style.display = role === 'staff' ? '' : 'none';
+  // staff และ manager ใช้ตัวเลือกสาขาแบบเดียวกัน (เลือกได้หลายสาขา กำหนดโดย admin) — ไม่ใช้ dropdown องค์กร/สาขาเดี่ยวแบบเดิมแล้ว
+  document.getElementById('user-org-branch-fields').style.display = 'none';
+  const showBranches = role === 'manager' || role === 'staff';
+  document.getElementById('user-manager-branches-fields').style.display = showBranches ? '' : 'none';
+  if(showBranches) renderBranchCheckboxList('user-manager-branches-list', []);
 }
 document.getElementById('user-role').addEventListener('change', toggleUserOrgBranchFields);
 document.getElementById('user-org').addEventListener('change', populateUserBranchSelect);
@@ -1815,16 +3399,15 @@ document.getElementById('btn-save-user').addEventListener('click', async ()=>{
   const password = document.getElementById('user-password').value;
   const displayName = document.getElementById('user-displayname').value.trim();
   const role = document.getElementById('user-role').value;
-  const orgId = role === 'staff' ? document.getElementById('user-org').value : '';
-  const branchId = role === 'staff' ? document.getElementById('user-branch').value : '';
+  const branchIds = (role === 'manager' || role === 'staff') ? getCheckedBranchIds('user-manager-branches-list') : [];
 
   if(!username || !password || !displayName){
     errBox.textContent = 'กรุณากรอกข้อมูลให้ครบ';
     errBox.style.display = '';
     return;
   }
-  if(role === 'staff' && (!orgId || !branchId)){
-    errBox.textContent = 'กรุณาเลือกองค์กรและสาขา (ต้องเพิ่มองค์กร/สาขาในแท็บ ตั้งค่าเอกสาร ก่อน)';
+  if((role === 'manager' || role === 'staff') && branchIds.length === 0){
+    errBox.textContent = 'กรุณาเลือกสาขาที่เข้าถึงได้อย่างน้อย 1 สาขา';
     errBox.style.display = '';
     return;
   }
@@ -1832,7 +3415,7 @@ document.getElementById('btn-save-user').addEventListener('click', async ()=>{
     const res = await fetch('/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, displayName, role, orgId, branchId }),
+      body: JSON.stringify({ username, password, displayName, role, branchIds }),
     });
     const body = await res.json().catch(()=>({}));
     if(!res.ok){
@@ -1841,6 +3424,48 @@ document.getElementById('btn-save-user').addEventListener('click', async ()=>{
       return;
     }
     closeOverlay('overlay-user');
+    await renderUsers();
+  }catch(e){
+    errBox.textContent = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง';
+    errBox.style.display = '';
+  }
+});
+
+function openManagerAccessForm(userId){
+  const u = users.find(x=>x.id===userId);
+  if(!u) return;
+  document.getElementById('access-form-error').style.display = 'none';
+  document.getElementById('access-user-id').value = userId;
+  document.getElementById('access-user-label').textContent = `ผู้ใช้: ${u.displayName || u.username}`;
+  // บัญชี staff เก่าที่ยังไม่เคยกำหนดผ่าน user_branch_access จะไม่มี branchIds — ให้ติ๊กสาขาเดี่ยวเดิมไว้ให้ก่อน
+  const initial = (u.branchIds && u.branchIds.length) ? u.branchIds : (u.branchId ? [u.branchId] : []);
+  renderBranchCheckboxList('access-branches-list', initial);
+  openOverlay('overlay-manager-access');
+}
+
+document.getElementById('btn-save-manager-access').addEventListener('click', async ()=>{
+  const errBox = document.getElementById('access-form-error');
+  errBox.style.display = 'none';
+  const userId = document.getElementById('access-user-id').value;
+  const branchIds = getCheckedBranchIds('access-branches-list');
+  if(branchIds.length === 0){
+    errBox.textContent = 'กรุณาเลือกสาขาที่เข้าถึงได้อย่างน้อย 1 สาขา';
+    errBox.style.display = '';
+    return;
+  }
+  try{
+    const res = await fetch('/api/users/' + encodeURIComponent(userId) + '/access', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ branchIds }),
+    });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok){
+      errBox.textContent = body.error || 'บันทึกไม่สำเร็จ';
+      errBox.style.display = '';
+      return;
+    }
+    closeOverlay('overlay-manager-access');
     await renderUsers();
   }catch(e){
     errBox.textContent = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง';
@@ -1899,15 +3524,95 @@ document.getElementById('btn-save-reset-pw').addEventListener('click', async ()=
   }
 });
 
+/* ---------- DUE BANNER (แจ้งเตือน admin เมื่อถึงวันครบกำหนดชำระ) ---------- */
+function renderDueBanner(){
+  const banner = document.getElementById('due-banner');
+  if(!currentUser || currentUser.role !== 'admin'){ banner.style.display = 'none'; return; }
+
+  const todayKey = new Date().toISOString().slice(0,10);
+  if(localStorage.getItem('due-banner-dismissed') === todayKey){ banner.style.display = 'none'; return; }
+
+  const ym = currentMonthStr();
+  const today = new Date(); today.setHours(0,0,0,0);
+  let dueTodayCount = 0, overdueCount = 0;
+  state.cases.filter(c=>!c.movedOut).forEach(c=>{
+    const p = state.payments[key(c.id, ym)];
+    if(p && p.paid) return;
+    const due = dueDateForMonth(c, ym); due.setHours(0,0,0,0);
+    if(due.getTime() === today.getTime()) dueTodayCount++;
+    else if(today > due) overdueCount++;
+  });
+
+  if(dueTodayCount === 0 && overdueCount === 0){ banner.style.display = 'none'; return; }
+
+  const parts = [];
+  if(dueTodayCount > 0) parts.push(`<b>${dueTodayCount}</b> เคสครบกำหนดชำระวันนี้`);
+  if(overdueCount > 0) parts.push(`<b>${overdueCount}</b> เคสเกินกำหนดชำระ`);
+
+  banner.style.display = 'flex';
+  banner.innerHTML = `
+    <span>🔔 สรุปบิล — ${parts.join(' และ ')} <a class="due-banner-link" id="due-banner-goto">ไปที่สรุปรายเดือน</a></span>
+    <button class="due-banner-close" id="due-banner-close" title="ปิดจนถึงพรุ่งนี้">&times;</button>
+  `;
+  document.getElementById('due-banner-goto').addEventListener('click', ()=>{
+    document.querySelector('.nav-btn[data-view="summary"]').click();
+  });
+  document.getElementById('due-banner-close').addEventListener('click', ()=>{
+    localStorage.setItem('due-banner-dismissed', todayKey);
+    banner.style.display = 'none';
+  });
+}
+
+/* ---------- APPOINTMENT REMINDER BANNER (เห็นได้ทุกบทบาท ตามเคสในสาขาที่ตนเข้าถึงได้) ---------- */
+function renderApptReminderBanner(){
+  const banner = document.getElementById('appt-banner');
+  const todayStr = new Date().toISOString().slice(0,10);
+  if(localStorage.getItem('appt-banner-dismissed') === todayStr){ banner.style.display = 'none'; return; }
+
+  const activeCaseIds = new Set(state.cases.filter(c=>!c.movedOut).map(c=>c.id));
+  const pending = (state.appointments||[]).filter(a=>{
+    if(a.status === 'cancelled') return false;
+    if(!activeCaseIds.has(a.caseId)) return false;
+    if(!a.date || a.date > todayStr) return false; // ยังไม่ถึงวันนัด
+    const items = state.entries[key(a.caseId, a.date.slice(0,7))] || [];
+    const logged = items.some(it=>it.category === 'escort' && it.date === a.date);
+    return !logged;
+  });
+
+  if(pending.length === 0){ banner.style.display = 'none'; return; }
+
+  banner.style.display = 'flex';
+  banner.innerHTML = `
+    <span>🩺 มี <b>${pending.length}</b> นัดหมอที่ถึงกำหนดแล้วแต่ยังไม่ได้ลงค่าใช้จ่ายค่าบริการพาไปพบแพทย์ <a class="due-banner-link" id="appt-banner-goto">ไปที่ปฏิทิน</a></span>
+    <button class="due-banner-close" id="appt-banner-close" title="ปิดจนถึงพรุ่งนี้">&times;</button>
+  `;
+  document.getElementById('appt-banner-goto').addEventListener('click', ()=>{
+    document.querySelector('.nav-btn[data-view="calendar"]').click();
+  });
+  document.getElementById('appt-banner-close').addEventListener('click', ()=>{
+    localStorage.setItem('appt-banner-dismissed', todayStr);
+    banner.style.display = 'none';
+  });
+}
+
 /* ---------- INIT ---------- */
 async function bootApp(){
   await loadState();
   refreshEntrySelectors();
   renderCases();
   renderEntries();
+  renderBills();
   renderSummary();
+  renderDueBanner();
+  renderApptReminderBanner();
 }
 checkAuthAndBoot();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  });
+}
 </script>
 </body>
 </html>
