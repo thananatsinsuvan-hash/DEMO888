@@ -9,6 +9,7 @@
  *   POST /api/state    -> บันทึกข้อมูล (admin บันทึกได้ทั้งหมด, staff บันทึกได้เฉพาะสาขาตัวเอง)
  *   POST /api/cases/:id/photo        -> อัปโหลดรูปคนไข้
  *   POST /api/orgs/:id/logo          -> อัปโหลดโลโก้องค์กร (admin เท่านั้น)
+ *   POST /api/branches/:id/signature -> อัปโหลดรูปลายเซ็นเจ้าหน้าที่ของสาขา (admin เท่านั้น)
  *   POST /api/payments/:caseId/:ym/slip -> อัปโหลดรูปสลิปโอนเงิน/หลักฐานรับเงินสด (บิลรายเดือน)
  *   POST /api/adhoc-bills/:billId/slip  -> อัปโหลดรูปสลิปโอนเงิน/หลักฐานรับเงินสด (บิลพิเศษระหว่างเดือน)
  *   GET  /api/photo/:key             -> ดึงไฟล์รูปจาก R2
@@ -94,6 +95,14 @@ export default {
         if (user.role !== "admin") return json({ error: "forbidden — เฉพาะผู้ดูแลระบบเท่านั้น" }, 403);
         const parts = url.pathname.split("/").filter(Boolean); // ["api","orgs",orgId,"logo"]
         return await handleUploadPhoto(request, env, `org-${parts[2]}-`);
+      }
+
+      if (url.pathname.startsWith("/api/branches/") && url.pathname.endsWith("/signature") && request.method === "POST") {
+        const user = await getUser(request, env);
+        if (!user) return json({ error: "unauthorized" }, 401);
+        if (user.role !== "admin") return json({ error: "forbidden — เฉพาะผู้ดูแลระบบเท่านั้น" }, 403);
+        const parts = url.pathname.split("/").filter(Boolean); // ["api","branches",branchId,"signature"]
+        return await handleUploadPhoto(request, env, `branch-sig-${parts[2]}-`);
       }
 
       if (url.pathname.startsWith("/api/payments/") && url.pathname.endsWith("/slip") && request.method === "POST") {
@@ -266,7 +275,7 @@ function mapUserRow(r, branchIds) {
     role: r.role,
     orgId: r.org_id || "",
     branchId: r.branch_id || "",
-    branchIds: r.role === "manager" || r.role === "staff" ? branchIds || [] : undefined,
+    branchIds: r.role === "manager" || r.role === "staff" || r.role === "accountant" ? branchIds || [] : undefined,
   };
 }
 
@@ -276,16 +285,16 @@ async function createUser(request, env) {
   const { username, password, displayName, role, orgId, branchId, branchIds } = body;
 
   if (!username || !password || !displayName || !role) return json({ error: "กรุณากรอกข้อมูลให้ครบ" }, 400);
-  if (role !== "admin" && role !== "manager" && role !== "staff") return json({ error: "role ต้องเป็น admin, manager หรือ staff เท่านั้น" }, 400);
+  if (role !== "admin" && role !== "manager" && role !== "staff" && role !== "accountant") return json({ error: "role ต้องเป็น admin, manager, staff หรือ accountant เท่านั้น" }, 400);
   if (password.length < 6) return json({ error: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร" }, 400);
-  if ((role === "manager" || role === "staff") && (!Array.isArray(branchIds) || branchIds.length === 0)) {
+  if ((role === "manager" || role === "staff" || role === "accountant") && (!Array.isArray(branchIds) || branchIds.length === 0)) {
     return json({ error: `ผู้ใช้ role ${role} ต้องเลือกสาขาที่เข้าถึงได้อย่างน้อย 1 สาขา` }, 400);
   }
 
   const usernameTaken = await env.DB.prepare("SELECT id FROM users WHERE username = ?").bind(username).first();
   if (usernameTaken) return json({ error: "ชื่อผู้ใช้นี้ถูกใช้แล้ว" }, 400);
 
-  if (role === "manager" || role === "staff") {
+  if (role === "manager" || role === "staff" || role === "accountant") {
     const placeholders = branchIds.map(() => "?").join(",");
     const validRows = (await env.DB.prepare(`SELECT id FROM branches WHERE id IN (${placeholders})`).bind(...branchIds).all()).results;
     if (validRows.length !== new Set(branchIds).size) return json({ error: "มีสาขาที่เลือกไม่ถูกต้อง" }, 400);
@@ -301,7 +310,7 @@ async function createUser(request, env) {
       .prepare("INSERT INTO users (id, username, password_hash, salt, display_name, role, org_id, branch_id) VALUES (?,?,?,?,?,?,?,?)")
       .bind(id, username, hash, salt, displayName, role, null, null),
   ];
-  if (role === "manager" || role === "staff") {
+  if (role === "manager" || role === "staff" || role === "accountant") {
     for (const bId of branchIds) {
       stmts.push(env.DB.prepare("INSERT INTO user_branch_access (user_id, branch_id) VALUES (?,?)").bind(id, bId));
     }
@@ -347,7 +356,7 @@ async function handleUploadPhoto(request, env, keyPrefix) {
 // ถ้าเป็นบัญชี staff เก่าที่ยังไม่เคยกำหนดผ่านตารางนี้ (สร้างไว้ตั้งแต่ก่อนมีฟีเจอร์นี้) จะ fallback ไปใช้ branch_id เดี่ยวที่ผูกไว้แต่เดิมแทน
 // admin: ไม่เรียกใช้ฟังก์ชันนี้ (เข้าถึงได้ทั้งหมดอยู่แล้ว)
 async function getAccessibleBranchIds(db, user) {
-  if (user.role === "manager" || user.role === "staff") {
+  if (user.role === "manager" || user.role === "staff" || user.role === "accountant") {
     const rows = (await db.prepare("SELECT branch_id FROM user_branch_access WHERE user_id = ?").bind(user.uid).all()).results;
     if (rows.length) return rows.map((r) => r.branch_id);
   }
@@ -388,16 +397,24 @@ function branchDocCode(branch) {
 }
 
 // จองเลขรันถัดไปของสาขา/ประเภทเอกสาร/ปีนั้น แบบ atomic (กันเลขซ้ำแม้มีการออกเอกสารพร้อมกัน)
-async function allocateDocSeq(db, branchId, docType, year) {
+// bankAccountKey ว่าง ("") = ใช้ชุดเลขหลักของสาขา (ปกติ) — ถ้าระบุ = แยกชุดเลขเฉพาะของบัญชีนั้น ไม่ปนกับชุดหลัก
+async function allocateDocSeq(db, branchId, docType, year, bankAccountKey = "") {
   const row = await db
     .prepare(
-      `INSERT INTO doc_sequences (branch_id, doc_type, year, last_seq) VALUES (?,?,?,1)
-       ON CONFLICT(branch_id, doc_type, year) DO UPDATE SET last_seq = last_seq + 1
+      `INSERT INTO doc_sequences (branch_id, doc_type, year, bank_account_id, last_seq) VALUES (?,?,?,?,1)
+       ON CONFLICT(branch_id, doc_type, year, bank_account_id) DO UPDATE SET last_seq = last_seq + 1
        RETURNING last_seq`
     )
-    .bind(branchId, docType, year)
+    .bind(branchId, docType, year, bankAccountKey || "")
     .first();
   return row.last_seq;
+}
+
+// เช็คว่าบัญชีธนาคารที่เคสนี้ผูกไว้ ตั้งค่าการออกเลขที่เอกสารแบบไหน ("shared" ถ้าไม่ได้ผูกบัญชี หรือไม่พบบัญชี)
+async function getDocNumberingMode(db, bankAccountId) {
+  if (!bankAccountId) return "shared";
+  const row = await db.prepare("SELECT doc_numbering FROM bank_accounts WHERE id = ?").bind(bankAccountId).first();
+  return (row && row.doc_numbering) || "shared";
 }
 
 function formatDocNo(docType, branch, year, seq) {
@@ -421,7 +438,7 @@ async function handleDocNumber(request, env, user) {
       const ok = await userOwnsCase(env.DB, accessibleBranchIds, caseId);
       if (!ok) return json({ error: "forbidden — เคสนี้ไม่ได้อยู่ในสาขาที่คุณเข้าถึงได้" }, 403);
     }
-    const caseRow = await env.DB.prepare("SELECT branch_id FROM cases WHERE id = ?").bind(caseId).first();
+    const caseRow = await env.DB.prepare("SELECT branch_id, bank_account_id FROM cases WHERE id = ?").bind(caseId).first();
     if (!caseRow || !caseRow.branch_id) return json({ error: "เคสนี้ยังไม่ได้ระบุสาขา ไม่สามารถออกเลขที่เอกสารได้" }, 400);
     const branch = await env.DB.prepare("SELECT * FROM branches WHERE id = ?").bind(caseRow.branch_id).first();
     const docType = kind === "monthly-invoice" ? "invoice" : "receipt";
@@ -431,8 +448,12 @@ async function handleDocNumber(request, env, user) {
     const existing = await env.DB.prepare(`SELECT ${col} AS no FROM payments WHERE case_id = ? AND ym = ?`).bind(caseId, ym).first();
     if (existing && existing.no) return json({ number: existing.no });
 
+    // บัญชีธนาคารที่เคสนี้ผูกไว้ตั้งเป็น "ไม่ต้องออกเลขที่เอกสาร" — คืนเลขว่าง ไม่บันทึก ไม่แตะตัวนับ
+    const numberingMode = await getDocNumberingMode(env.DB, caseRow.bank_account_id);
+    if (numberingMode === "none") return json({ number: "" });
+
     const year = beYear(new Date());
-    const seq = await allocateDocSeq(env.DB, branch.id, docType, year);
+    const seq = await allocateDocSeq(env.DB, branch.id, docType, year, numberingMode === "separate" ? caseRow.bank_account_id : "");
     const number = formatDocNo(docType, mapBranch(branch), year, seq);
     await env.DB.prepare(`UPDATE payments SET ${col} = ? WHERE case_id = ? AND ym = ?`).bind(number, caseId, ym).run();
     return json({ number });
@@ -445,7 +466,7 @@ async function handleDocNumber(request, env, user) {
     if (!ok) return json({ error: "forbidden — บิลนี้ไม่ได้อยู่ในสาขาที่คุณเข้าถึงได้" }, 403);
   }
   const billRow = await env.DB
-    .prepare(`SELECT ab.*, c.branch_id AS branch_id FROM adhoc_bills ab JOIN cases c ON c.id = ab.case_id WHERE ab.id = ?`)
+    .prepare(`SELECT ab.*, c.branch_id AS branch_id, c.bank_account_id AS bank_account_id FROM adhoc_bills ab JOIN cases c ON c.id = ab.case_id WHERE ab.id = ?`)
     .bind(billId)
     .first();
   if (!billRow || !billRow.branch_id) return json({ error: "ไม่พบบิลนี้ หรือเคสยังไม่ได้ระบุสาขา" }, 400);
@@ -455,8 +476,12 @@ async function handleDocNumber(request, env, user) {
 
   if (billRow[col]) return json({ number: billRow[col] });
 
+  // บัญชีธนาคารที่เคสนี้ผูกไว้ตั้งเป็น "ไม่ต้องออกเลขที่เอกสาร" — คืนเลขว่าง ไม่บันทึก ไม่แตะตัวนับ
+  const numberingMode = await getDocNumberingMode(env.DB, billRow.bank_account_id);
+  if (numberingMode === "none") return json({ number: "" });
+
   const year = beYear(new Date());
-  const seq = await allocateDocSeq(env.DB, branch.id, docType, year);
+  const seq = await allocateDocSeq(env.DB, branch.id, docType, year, numberingMode === "separate" ? billRow.bank_account_id : "");
   const number = formatDocNo(docType, mapBranch(branch), year, seq);
   await env.DB.prepare(`UPDATE adhoc_bills SET ${col} = ? WHERE id = ?`).bind(number, billId).run();
   return json({ number });
@@ -531,9 +556,26 @@ function base64urlDecode(str) {
 
 /* ================= DATA MAPPING ================= */
 
-const mapOrg = (o) => ({ id: o.id, name: o.name, logo: o.logo || "", logoKey: o.logo_key || "", staff: o.staff || "", note: o.note || "" });
-const mapBranch = (b) => ({ id: b.id, orgId: b.org_id, name: b.name, address: b.address || "", phone: b.phone || "", code: b.code || "" });
-const mapBankAccount = (a) => ({ id: a.id, branchId: a.branch_id, bankName: a.bank_name || "", bankAcc: a.bank_acc || "", bankOwner: a.bank_owner || "" });
+const mapOrg = (o) => ({ id: o.id, name: o.name, companyName: o.company_name || "", taxId: o.tax_id || "", address: o.address || "", logo: o.logo || "", logoKey: o.logo_key || "", staff: o.staff || "", note: o.note || "" });
+const mapBranch = (b) => ({
+  id: b.id,
+  orgId: b.org_id,
+  name: b.name,
+  address: b.address || "",
+  phone: b.phone || "",
+  code: b.code || "",
+  staff: b.staff || "",
+  signatureKey: b.signature_key || "",
+});
+const mapBankAccount = (a) => ({
+  id: a.id,
+  branchId: a.branch_id,
+  bankName: a.bank_name || "",
+  bankAcc: a.bank_acc || "",
+  bankOwner: a.bank_owner || "",
+  docNumbering: a.doc_numbering || "shared", // "shared" = ใช้เลขร่วมกับสาขา, "separate" = แยกชุดเลขของบัญชีนี้, "none" = ไม่ต้องออกเลขที่เอกสาร
+  withholdingTax: a.withholding_tax || "none", // "apply" = หัก ณ ที่จ่าย 3% เป็นค่าเริ่มต้นสำหรับเคสที่ใช้บัญชีนี้, "none" = ไม่หัก
+});
 const mapCase = (c) => ({
   id: c.id,
   branchId: c.branch_id || "",
@@ -551,6 +593,11 @@ const mapCase = (c) => ({
   emergencyContact: c.emergency_contact || "",
   emergencyPhone: c.emergency_phone || "",
   admissionDate: c.admission_date || "",
+  dueDateOverride: c.due_date_override || "",
+  withholdingOverride: c.withholding_override || "",
+  address: c.address || "",
+  phone: c.phone || "",
+  taxId: c.tax_id || "",
   photoKey: c.photo_key || "",
   movedOut: !!c.moved_out,
   moveOutDate: c.move_out_date || "",
@@ -636,24 +683,29 @@ async function saveState(db, state) {
   ];
 
   for (const o of state.orgs || []) {
-    stmts.push(db.prepare("INSERT INTO orgs (id,name,logo,logo_key,staff,note) VALUES (?,?,?,?,?,?)").bind(o.id, o.name || "", o.logo || "", o.logoKey || "", o.staff || "", o.note || ""));
+    stmts.push(db.prepare("INSERT INTO orgs (id,name,company_name,tax_id,address,logo,logo_key,staff,note) VALUES (?,?,?,?,?,?,?,?,?)").bind(o.id, o.name || "", o.companyName || "", o.taxId || "", o.address || "", o.logo || "", o.logoKey || "", o.staff || "", o.note || ""));
   }
   for (const b of state.branches || []) {
-    stmts.push(db.prepare("INSERT INTO branches (id,org_id,name,address,phone,code) VALUES (?,?,?,?,?,?)").bind(b.id, b.orgId, b.name || "", b.address || "", b.phone || "", b.code || ""));
+    stmts.push(db.prepare("INSERT INTO branches (id,org_id,name,address,phone,code,staff,signature_key) VALUES (?,?,?,?,?,?,?,?)").bind(b.id, b.orgId, b.name || "", b.address || "", b.phone || "", b.code || "", b.staff || "", b.signatureKey || ""));
   }
   for (const a of state.bankAccounts || []) {
-    stmts.push(db.prepare("INSERT INTO bank_accounts (id,branch_id,bank_name,bank_acc,bank_owner) VALUES (?,?,?,?,?)").bind(a.id, a.branchId, a.bankName || "", a.bankAcc || "", a.bankOwner || ""));
+    stmts.push(
+      db
+        .prepare("INSERT INTO bank_accounts (id,branch_id,bank_name,bank_acc,bank_owner,doc_numbering,withholding_tax) VALUES (?,?,?,?,?,?,?)")
+        .bind(a.id, a.branchId, a.bankName || "", a.bankAcc || "", a.bankOwner || "", a.docNumbering || "shared", a.withholdingTax || "none")
+    );
   }
   for (const c of state.cases || []) {
     stmts.push(
       db
         .prepare(
-          `INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner,bank_account_id,age,health_info,allergy,emergency_contact,emergency_phone,admission_date,photo_key,moved_out,move_out_date)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+          `INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner,bank_account_id,age,health_info,allergy,emergency_contact,emergency_phone,admission_date,due_date_override,withholding_override,address,phone,tax_id,photo_key,moved_out,move_out_date)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
         )
         .bind(
           c.id, c.branchId || null, c.name, c.note || "", c.monthlyFee || 0, c.dueDay || 1, c.bankName || "", c.bankAcc || "", c.bankOwner || "", c.bankAccountId || null,
-          c.age ?? null, c.healthInfo || "", c.allergy || "", c.emergencyContact || "", c.emergencyPhone || "", c.admissionDate || "", c.photoKey || "",
+          c.age ?? null, c.healthInfo || "", c.allergy || "", c.emergencyContact || "", c.emergencyPhone || "", c.admissionDate || "", c.dueDateOverride || "",
+          c.withholdingOverride || "", c.address || "", c.phone || "", c.taxId || "", c.photoKey || "",
           c.movedOut ? 1 : 0, c.moveOutDate || null
         )
     );
@@ -794,19 +846,21 @@ async function saveScopedState(db, state, branchIds) {
   for (const c of scopedCases) {
     stmts.push(
       db.prepare(`
-        INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner,bank_account_id,age,health_info,allergy,emergency_contact,emergency_phone,admission_date,photo_key,moved_out,move_out_date)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner,bank_account_id,age,health_info,allergy,emergency_contact,emergency_phone,admission_date,due_date_override,withholding_override,address,phone,tax_id,photo_key,moved_out,move_out_date)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET
           branch_id=excluded.branch_id, name=excluded.name, note=excluded.note,
           monthly_fee=excluded.monthly_fee, due_day=excluded.due_day,
           bank_name=excluded.bank_name, bank_acc=excluded.bank_acc, bank_owner=excluded.bank_owner, bank_account_id=excluded.bank_account_id,
           age=excluded.age, health_info=excluded.health_info, allergy=excluded.allergy,
           emergency_contact=excluded.emergency_contact, emergency_phone=excluded.emergency_phone,
-          admission_date=excluded.admission_date, photo_key=excluded.photo_key,
+          admission_date=excluded.admission_date, due_date_override=excluded.due_date_override,
+          withholding_override=excluded.withholding_override, address=excluded.address, phone=excluded.phone, tax_id=excluded.tax_id, photo_key=excluded.photo_key,
           moved_out=excluded.moved_out, move_out_date=excluded.move_out_date
       `).bind(
         c.id, c.branchId, c.name, c.note || "", c.monthlyFee || 0, c.dueDay || 1, c.bankName || "", c.bankAcc || "", c.bankOwner || "", c.bankAccountId || null,
-        c.age ?? null, c.healthInfo || "", c.allergy || "", c.emergencyContact || "", c.emergencyPhone || "", c.admissionDate || "", c.photoKey || "",
+        c.age ?? null, c.healthInfo || "", c.allergy || "", c.emergencyContact || "", c.emergencyPhone || "", c.admissionDate || "", c.dueDateOverride || "",
+        c.withholdingOverride || "", c.address || "", c.phone || "", c.taxId || "", c.photoKey || "",
         c.movedOut ? 1 : 0, c.moveOutDate || null
       )
     );

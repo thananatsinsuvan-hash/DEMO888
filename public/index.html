@@ -117,11 +117,12 @@
   .btn-sm{padding:6px 11px;font-size:12.5px;}
   .btn:disabled{opacity:.45;cursor:not-allowed;}
 
-  input,select{
+  input,select,textarea{
     font-family:inherit;font-size:14px;padding:9px 11px;border-radius:8px;
     border:0.5px solid var(--line-strong);background:#fff;color:var(--ink);width:100%;
   }
-  input:focus,select:focus{outline:none;border-color:var(--pine);box-shadow:0 0 0 3px var(--pine-tint);}
+  textarea{resize:vertical;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pine);box-shadow:0 0 0 3px var(--pine-tint);}
   label{font-size:12.5px;color:var(--ink-soft);display:block;margin-bottom:5px;}
   .field{margin-bottom:14px;}
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -185,10 +186,18 @@
   /* Calendar view */
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
   .cal-dow{font-size:12px;font-weight:600;color:var(--ink-soft);text-align:center;padding:4px 0;}
-  .cal-cell{min-height:92px;border:1px solid var(--line-strong,#E4E1D8);border-radius:8px;padding:6px;background:#fff;display:flex;flex-direction:column;gap:4px;}
+  .cal-cell{min-height:92px;border:1px solid var(--line-strong,#E4E1D8);border-radius:8px;padding:6px;background:#fff;display:flex;flex-direction:column;gap:4px;cursor:default;}
   .cal-cell.empty{background:transparent;border:none;}
   .cal-cell.today{border-color:var(--pine-dark,#20453B);border-width:2px;}
+  .cal-cell.has-items{cursor:pointer;}
+  .cal-cell.has-items:hover{border-color:var(--pine-dark,#20453B);background:var(--moss-tint,#F3F6EE);}
   .cal-daynum{font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .cal-indicators{display:flex;flex-wrap:wrap;gap:4px;align-items:center;}
+  .cal-dot{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;font-size:10.5px;font-weight:700;}
+  .cal-dot.tag-paid{background:var(--moss-tint);color:#245536;}
+  .cal-dot.tag-due{background:var(--gold-tint);color:#7A5A22;}
+  .cal-dot.tag-overdue{background:var(--rust-tint);color:#8C3A26;}
+  .cal-dot.cal-dot-appt{background:#E4E9F7;color:#2E4C8C;}
   .cal-case-chip{display:block;font-size:11px;padding:2px 6px;border-radius:6px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
   .cal-appt-chip{display:block;font-size:11px;padding:2px 6px;border-radius:6px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:#E4E9F7;color:#2E4C8C;}
   .cal-appt-chip.cancelled{background:#EDEBE6;color:#918C7F;text-decoration:line-through;}
@@ -307,6 +316,8 @@
   @media print{
     body *{visibility:hidden;}
     #print-area, #print-area *{visibility:visible;}
+    .app{display:none !important;}
+    html, body{height:auto !important;}
     #print-area{
       position:absolute;top:0;left:0;width:100%;padding:0;
       font-size:12px;transform-origin:top left;
@@ -334,9 +345,36 @@
     .sidebar-foot{display:flex;align-items:center;gap:8px;margin-top:0;margin-left:auto;flex-shrink:0;}
     .sidebar-foot #sidebar-user-name,.sidebar-foot #sidebar-user-role{display:none;}
     .sidebar-foot #btn-logout{width:auto;white-space:nowrap;}
-    .main{padding:20px;}
+    .main{padding:16px;}
     .entry-panel{grid-template-columns:1fr;}
     .doc-grid{grid-template-columns:1fr;}
+    .field-row{grid-template-columns:1fr;}
+
+    /* ตาราง — ให้ div ที่ครอบตารางแต่ละหน้าเลื่อนดูแนวนอนได้ แทนที่จะบีบคอลัมน์จนอ่านไม่ออก */
+    [id$="-body"]{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    [id$="-body"] table{min-width:600px;}
+
+    /* ปุ่มใหญ่ขึ้นเล็กน้อยให้กดง่ายด้วยนิ้ว */
+    .btn{padding:10px 16px;min-height:40px;}
+    .btn-sm{padding:8px 13px;font-size:13px;min-height:36px;}
+
+    /* modal/overlay เต็มพื้นที่มากขึ้นบนจอเล็ก */
+    .overlay{padding:0;align-items:flex-end;}
+    .modal{max-width:100%;max-height:94vh;border-radius:16px 16px 0 0;padding:20px 18px;}
+    .modal.wide{max-width:100%;}
+    .doc-modal{max-width:100%;}
+    #print-area{padding:20px 18px;}
+
+    .summary-card{padding:14px;}
+  }
+
+  @media (max-width:480px){
+    .main{padding:12px;}
+    h1, .page-title{font-size:18px;}
+    .modal{padding:16px 14px;}
+    .btn{padding:9px 14px;font-size:14px;}
+    .doc-grid{gap:12px;font-size:13px;}
+    .summary-card h3{font-size:14px;}
   }
 </style>
 </head>
@@ -372,7 +410,7 @@
     <button class="nav-btn" data-view="entries"><span class="nav-dot"></span>บันทึกค่าใช้จ่าย</button>
     <button class="nav-btn" data-view="bills"><span class="nav-dot"></span>บิลค้างชำระ</button>
     <button class="nav-btn" id="nav-calendar" data-view="calendar"><span class="nav-dot"></span>ปฏิทินครบกำหนด</button>
-    <button class="nav-btn" id="nav-summary" data-view="summary" data-manager-up><span class="nav-dot"></span>สรุปรายเดือน</button>
+    <button class="nav-btn" id="nav-summary" data-view="summary" data-accountant-up><span class="nav-dot"></span>สรุปรายเดือน</button>
     <button class="nav-btn" id="nav-docs-summary" data-view="docs-summary" data-manager-up><span class="nav-dot"></span>สรุปเอกสาร</button>
     <button class="nav-btn" id="nav-settings" data-view="settings" data-admin-only><span class="nav-dot"></span>ตั้งค่าเอกสาร</button>
     <button class="nav-btn" id="nav-users" data-view="users" data-admin-only><span class="nav-dot"></span>จัดการผู้ใช้</button>
@@ -622,11 +660,39 @@
         <input id="case-admission-date" type="date">
       </div>
     </div>
-    <p style="font-size:12px;color:var(--ink-soft);margin:-8px 0 14px;">ระบบจะคำนวณวันครบกำหนดชำระของทุกเดือนจากวันที่ในช่องนี้โดยอัตโนมัติ</p>
+    <div class="field-row">
+      <div class="field">
+        <label>วันครบกำหนดชำระ (ถ้าไม่ระบุ จะยึดวันที่เข้ารับบริการ)</label>
+        <input id="case-due-date" type="date">
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--ink-soft);margin:-8px 0 14px;">ระบบจะคำนวณวันครบกำหนดชำระของทุกเดือนจาก "วันครบกำหนดชำระ" ถ้าระบุไว้ ถ้าไม่ระบุจะใช้ "วันที่เข้ารับบริการ" แทน</p>
     <div class="field">
       <label>บัญชีธนาคารที่ใช้เรียกเก็บเงินเคสนี้</label>
       <select id="case-bank-account"><option value="">— เลือกบัญชีธนาคาร —</option></select>
       <p style="font-size:12px;color:var(--ink-soft);margin:6px 0 0;" id="case-bank-hint">ยังไม่มีบัญชีธนาคารในสาขานี้ — เพิ่มได้ที่แท็บ "ตั้งค่าเอกสาร" &gt; แก้ไขสาขา</p>
+    </div>
+    <div class="field">
+      <label>หัก ณ ที่จ่าย (สำหรับพิมพ์ในใบเรียกเก็บ/ใบเสร็จของเคสนี้)</label>
+      <select id="case-withholding-override">
+        <option value="">ใช้ตามค่าเริ่มต้นของบัญชีธนาคารที่เลือกไว้ (ปกติ)</option>
+        <option value="always">หักเสมอ (3%) ไม่ว่าบัญชีจะตั้งไว้แบบไหน</option>
+        <option value="never">ไม่หักเลย ไม่ว่าบัญชีจะตั้งไว้แบบไหน</option>
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>ที่อยู่คนไข้ (สำหรับพิมพ์ในใบเรียกเก็บ/ใบเสร็จ)</label>
+        <input id="case-address" placeholder="เลขที่ ถนน ตำบล/แขวง อำเภอ/เขต จังหวัด รหัสไปรษณีย์">
+      </div>
+      <div class="field">
+        <label>โทรศัพท์คนไข้ (สำหรับพิมพ์ในใบเรียกเก็บ/ใบเสร็จ)</label>
+        <input id="case-phone" placeholder="08x-xxx-xxxx">
+      </div>
+    </div>
+    <div class="field">
+      <label>เลขประจำตัวผู้เสียภาษีคนไข้ (สำหรับพิมพ์ในใบเรียกเก็บ/ใบเสร็จ)</label>
+      <input id="case-tax-id" placeholder="เลข 13 หลัก">
     </div>
     <div class="modal-foot">
       <button class="btn btn-danger" id="btn-delete-case" style="margin-right:auto;display:none;">ลบเคสนี้</button>
@@ -651,8 +717,20 @@
       <button type="button" class="btn btn-sm" id="btn-upload-logo">อัปโหลดโลโก้</button>
     </div>
     <div class="field">
-      <label>ชื่อองค์กร / ศูนย์</label>
+      <label>ชื่อองค์กร / ศูนย์ (ใช้แสดงในระบบ)</label>
       <input id="org-name" placeholder="เช่น ศูนย์ดูแลผู้สูงอายุ มาสุ เนอร์สซิ่ง โฮม">
+    </div>
+    <div class="field">
+      <label>ชื่อบริษัทฯ (สำหรับพิมพ์ในเอกสาร — ถ้าไม่กรอก จะใช้ชื่อองค์กรด้านบนแทน)</label>
+      <input id="org-company-name" placeholder="เช่น บริษัท มาสุ แคร์ จำกัด">
+    </div>
+    <div class="field">
+      <label>เลขประจำตัวผู้เสียภาษี</label>
+      <input id="org-tax-id" placeholder="เลข 13 หลัก">
+    </div>
+    <div class="field">
+      <label>ที่ตั้งบริษัท (สำหรับพิมพ์ในเอกสาร)</label>
+      <textarea id="org-address" rows="2" placeholder="เลขที่ ถนน ตำบล/แขวง อำเภอ/เขต จังหวัด รหัสไปรษณีย์"></textarea>
     </div>
     <div class="field">
       <label>ชื่อย่อโลโก้ (2-4 ตัวอักษร) — ใช้แสดงกรณียังไม่ได้อัปโหลดรูปโลโก้</label>
@@ -703,6 +781,18 @@
       <input id="branch-code" placeholder="เช่น NW, BKK1 — ถ้าไม่ระบุระบบจะตั้งให้อัตโนมัติ">
       <p style="font-size:12px;color:var(--ink-soft);margin:6px 0 0;">เลขที่เอกสารจะรันแยกตามสาขานี้ เช่น INV-NW-2569-0001 (รีเซ็ตเป็น 0001 ทุกต้นปี)</p>
     </div>
+    <div class="field">
+      <label>ชื่อเจ้าหน้าที่ผู้ออกเอกสาร (สาขานี้)</label>
+      <input id="branch-staff" placeholder="ชื่อ-นามสกุล เจ้าหน้าที่">
+      <p style="font-size:12px;color:var(--ink-soft);margin:6px 0 0;">แสดงในใบแจ้งยอด/ใบเสร็จของสาขานี้ — ถ้าไม่กรอก ระบบจะใช้ชื่อเจ้าหน้าที่ขององค์กรแทน</p>
+    </div>
+    <div class="field" style="text-align:center;">
+      <label>ลายเซ็นเจ้าหน้าที่ (สาขานี้)</label>
+      <div id="branch-sig-preview" style="width:160px;height:60px;border:1px dashed var(--line-strong);border-radius:8px;margin:6px auto 8px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:12px;">ยังไม่มีลายเซ็น</div>
+      <input type="file" id="branch-sig-file" accept="image/*" style="display:none;">
+      <input type="hidden" id="branch-sig-key">
+      <button type="button" class="btn btn-sm" id="btn-upload-branch-sig">อัปโหลดรูปลายเซ็น</button>
+    </div>
 
     <div id="branch-bank-section" style="display:none;">
       <h3 style="font-size:14px;margin:18px 0 8px;">บัญชีธนาคารของสาขา</h3>
@@ -712,9 +802,18 @@
         <input type="text" id="new-bank-name" placeholder="ธนาคาร">
         <input type="text" id="new-bank-acc" placeholder="เลขที่บัญชี">
         <input type="text" id="new-bank-owner" placeholder="ชื่อบัญชี">
+        <select id="new-bank-doc-numbering" title="รูปแบบเลขที่เอกสารสำหรับเคสที่ใช้บัญชีนี้">
+          <option value="shared">เลขที่เอกสาร: ใช้ร่วมกับสาขา (ปกติ)</option>
+          <option value="separate">เลขที่เอกสาร: แยกชุดของบัญชีนี้</option>
+          <option value="none">เลขที่เอกสาร: ไม่ต้องออกเลข</option>
+        </select>
+        <select id="new-bank-withholding" title="หัก ณ ที่จ่ายเริ่มต้นสำหรับเคสที่ใช้บัญชีนี้">
+          <option value="none">หัก ณ ที่จ่าย: ไม่หัก (ปกติ)</option>
+          <option value="apply">หัก ณ ที่จ่าย: หัก 3%</option>
+        </select>
         <button class="btn btn-sm" id="btn-add-bank-account">+ เพิ่มบัญชี</button>
       </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;">บันทึกสาขาก่อน จึงจะเพิ่มบัญชีธนาคารได้</p>
+      <p style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;">บันทึกสาขาก่อน จึงจะเพิ่มบัญชีธนาคารได้ — "แยกชุด" คือนับเลขแยกต่างหากจากสาขา (รูปแบบเลขเหมือนเดิม) ส่วน "ไม่ต้องออกเลข" คือใบเสร็จ/ใบเรียกเก็บของเคสที่ใช้บัญชีนี้จะไม่มีเลขที่เอกสาร (ยังพิมพ์เอกสารได้ปกติ) — "หัก ณ ที่จ่าย" เป็นค่าเริ่มต้นของเคสที่ใช้บัญชีนี้ แต่ละเคสตั้งค่าแยกทับได้ที่ฟอร์มเคส</p>
     </div>
 
     <div class="modal-foot">
@@ -749,6 +848,7 @@
       <label>บทบาท</label>
       <select id="user-role">
         <option value="staff">staff — เข้าถึงได้เฉพาะสาขาที่ admin อนุญาต (เลือกได้หลายสาขา)</option>
+        <option value="accountant">ผู้ลงบัญชี — เหมือน staff แต่เห็นหน้าสรุปรายเดือนด้วย (ไม่เห็นยอดรวม, ลบบิลไม่ได้)</option>
         <option value="manager">manager — เห็นเฉพาะสาขาที่ admin อนุญาต (เลือกได้หลายสาขา)</option>
         <option value="admin">admin — เข้าถึงได้ทุกองค์กร/สาขา</option>
       </select>
@@ -892,6 +992,36 @@
   </div>
 </div>
 
+<!-- CALENDAR DAY DETAIL MODAL -->
+<div class="overlay" id="overlay-cal-day">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="cal-day-title">รายละเอียดวันที่</h3>
+      <button class="modal-close" data-close="overlay-cal-day">&times;</button>
+    </div>
+    <div id="cal-day-body"></div>
+    <div class="modal-foot">
+      <button class="btn" data-close="overlay-cal-day">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- SLIP VIEW MODAL (ดูรูปสลิปอย่างเดียว ไม่เกี่ยวกับใบเสร็จ) -->
+<div class="overlay" id="overlay-slip-view">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>รูปหลักฐานการโอนเงิน</h3>
+      <button class="modal-close" data-close="overlay-slip-view">&times;</button>
+    </div>
+    <div style="text-align:center;">
+      <img id="slip-view-img" src="" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;">
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close="overlay-slip-view">ปิด</button>
+    </div>
+  </div>
+</div>
+
 <!-- ADHOC BILL PAYMENT MODAL -->
 <div class="overlay" id="overlay-adhoc-pay">
   <div class="modal">
@@ -1010,6 +1140,28 @@ function initials(name){
 }
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function thb(n){ return new Intl.NumberFormat('th-TH',{style:'currency',currency:'THB',maximumFractionDigits:0}).format(n||0); }
+
+const WITHHOLDING_RATE = 0.03; // อัตราหัก ณ ที่จ่าย 3% ตามที่กำหนดไว้ (คงที่ทั้งระบบ)
+// เช็คว่าเคสนี้ต้องหัก ณ ที่จ่ายไหม: เคสตั้งค่าเองก่อน (always/never) ถ้าไม่ได้ตั้งไว้ ("") ให้ยึดตามค่า default ของบัญชีธนาคารที่ผูกกับเคส
+function isWithholdingApplied(c){
+  if(!c) return false;
+  if(c.withholdingOverride === 'always') return true;
+  if(c.withholdingOverride === 'never') return false;
+  const acc = state.bankAccounts.find(a=>a.id===c.bankAccountId);
+  return !!(acc && acc.withholdingTax === 'apply');
+}
+function computeWithholding(baseAmount, c){
+  if(!isWithholdingApplied(c) || !(baseAmount > 0)) return 0;
+  return Math.round(baseAmount * WITHHOLDING_RATE * 100) / 100;
+}
+function withholdingRow(amount){
+  if(!(amount > 0)) return '';
+  return `
+      <tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">หัก ณ ที่จ่าย (${(WITHHOLDING_RATE*100).toFixed(0)}%)</span><span class="label-th">Withholding Tax</span></td>
+        <td class="amt" style="width:150px;">-${thb(amount)}</td>
+      </tr>`;
+}
 function thaiDateLong(d){ return new Intl.DateTimeFormat('th-TH',{day:'numeric',month:'long',year:'numeric'}).format(d); }
 function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); }
 function currentMonthStr(){
@@ -1135,7 +1287,8 @@ function showApp(){
 function applyRolePermissions(){
   const isAdmin = currentUser && currentUser.role === 'admin';
   const isManager = currentUser && currentUser.role === 'manager';
-  const roleLabel = isAdmin ? 'ผู้ดูแลระบบ' : isManager ? 'ผู้จัดการ' : 'พนักงานสาขา';
+  const isAccountant = currentUser && currentUser.role === 'accountant';
+  const roleLabel = isAdmin ? 'ผู้ดูแลระบบ' : isManager ? 'ผู้จัดการ' : isAccountant ? 'ผู้ลงบัญชี' : 'พนักงานสาขา';
   document.getElementById('sidebar-user-name').textContent = currentUser ? currentUser.displayName : '';
   document.getElementById('sidebar-user-role').innerHTML = currentUser
     ? `<span class="role-badge">${roleLabel}</span>` : '';
@@ -1144,6 +1297,9 @@ function applyRolePermissions(){
   });
   document.querySelectorAll('[data-manager-up]').forEach(el=>{
     el.style.display = (isAdmin || isManager) ? '' : 'none';
+  });
+  document.querySelectorAll('[data-accountant-up]').forEach(el=>{
+    el.style.display = (isAdmin || isManager || isAccountant) ? '' : 'none';
   });
 }
 
@@ -1289,6 +1445,9 @@ function openOrgForm(orgId){
   document.getElementById('org-modal-title').textContent = o ? 'แก้ไของค์กร' : 'เพิ่มองค์กร';
   document.getElementById('org-id').value = o ? o.id : uid();
   document.getElementById('org-name').value = o ? o.name : '';
+  document.getElementById('org-company-name').value = o ? (o.companyName||'') : '';
+  document.getElementById('org-tax-id').value = o ? (o.taxId||'') : '';
+  document.getElementById('org-address').value = o ? (o.address||'') : '';
   document.getElementById('org-logo').value = o ? (o.logo||'') : '';
   document.getElementById('org-logo-key').value = o ? (o.logoKey||'') : '';
   showOrgLogoPreview(o ? o.logoKey : '');
@@ -1305,6 +1464,9 @@ document.getElementById('btn-save-org').addEventListener('click', async ()=>{
   const data = {
     id,
     name,
+    companyName: document.getElementById('org-company-name').value.trim(),
+    taxId: document.getElementById('org-tax-id').value.trim(),
+    address: document.getElementById('org-address').value.trim(),
     logo: document.getElementById('org-logo').value.trim(),
     logoKey: document.getElementById('org-logo-key').value,
     staff: document.getElementById('org-staff').value.trim(),
@@ -1342,6 +1504,38 @@ document.getElementById('btn-delete-org').addEventListener('click', async ()=>{
 });
 
 /* ---------- BRANCHES ---------- */
+function showBranchSigPreview(key){
+  const el = document.getElementById('branch-sig-preview');
+  if(key){
+    el.innerHTML = `<img src="/api/photo/${encodeURIComponent(key)}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
+  } else {
+    el.textContent = 'ยังไม่มีลายเซ็น';
+  }
+}
+document.getElementById('btn-upload-branch-sig').addEventListener('click', ()=>{
+  const branchId = document.getElementById('branch-id').value;
+  if(!branchId){ alert('กรุณากรอกชื่อสาขาและกดบันทึกก่อนหนึ่งครั้ง แล้วค่อยแก้ไขเพื่ออัปโหลดลายเซ็น'); return; }
+  document.getElementById('branch-sig-file').click();
+});
+document.getElementById('branch-sig-file').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ alert('กรุณาเลือกไฟล์รูปภาพ'); return; }
+  if(file.size > 5*1024*1024){ alert('ไฟล์รูปใหญ่เกินไป (จำกัด 5MB)'); return; }
+  const branchId = document.getElementById('branch-id').value;
+  try{
+    const res = await fetch('/api/branches/'+encodeURIComponent(branchId)+'/signature', {
+      method: 'POST',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok){ alert(body.error || 'อัปโหลดลายเซ็นไม่สำเร็จ'); return; }
+    document.getElementById('branch-sig-key').value = body.key;
+    showBranchSigPreview(body.key);
+  }catch(err){ alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ อัปโหลดลายเซ็นไม่สำเร็จ'); }
+});
 function orgName(orgId){
   const o = state.orgs.find(x=>x.id===orgId);
   return o ? o.name : '';
@@ -1395,12 +1589,40 @@ function renderBranchBankList(branchId){
     list.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);margin:4px 0;">ยังไม่มีบัญชีธนาคาร</p>`;
     return;
   }
+  const docNumberingLabel = { shared: 'ใช้ร่วมกับสาขา', separate: 'แยกชุดของบัญชีนี้', none: 'ไม่ต้องออกเลข' };
   list.innerHTML = accounts.map(a=>`
     <div class="entry-row">
       <span class="entry-desc"><b>${escapeHtml(a.bankName)}</b> · ${escapeHtml(a.bankAcc)}<br><span style="color:var(--ink-soft);font-size:12px;">${escapeHtml(a.bankOwner||'')}</span></span>
+      <select data-doc-numbering="${a.id}" title="รูปแบบเลขที่เอกสาร" style="font-size:12px;">
+        <option value="shared" ${a.docNumbering==='shared'?'selected':''}>เลขที่เอกสาร: ${docNumberingLabel.shared}</option>
+        <option value="separate" ${a.docNumbering==='separate'?'selected':''}>เลขที่เอกสาร: ${docNumberingLabel.separate}</option>
+        <option value="none" ${a.docNumbering==='none'?'selected':''}>เลขที่เอกสาร: ${docNumberingLabel.none}</option>
+      </select>
+      <select data-withholding="${a.id}" title="หัก ณ ที่จ่ายเริ่มต้น" style="font-size:12px;">
+        <option value="none" ${a.withholdingTax!=='apply'?'selected':''}>หัก ณ ที่จ่าย: ไม่หัก</option>
+        <option value="apply" ${a.withholdingTax==='apply'?'selected':''}>หัก ณ ที่จ่าย: หัก 3%</option>
+      </select>
       <button class="btn btn-sm btn-ghost btn-danger" data-del-bank="${a.id}">ลบ</button>
     </div>
   `).join('');
+  list.querySelectorAll('[data-doc-numbering]').forEach(sel=>{
+    sel.addEventListener('change', async ()=>{
+      const bankId = sel.dataset.docNumbering;
+      const acc = state.bankAccounts.find(a=>a.id===bankId);
+      if(!acc) return;
+      acc.docNumbering = sel.value;
+      await saveState();
+    });
+  });
+  list.querySelectorAll('[data-withholding]').forEach(sel=>{
+    sel.addEventListener('change', async ()=>{
+      const bankId = sel.dataset.withholding;
+      const acc = state.bankAccounts.find(a=>a.id===bankId);
+      if(!acc) return;
+      acc.withholdingTax = sel.value;
+      await saveState();
+    });
+  });
   list.querySelectorAll('[data-del-bank]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       if(!confirm('ยืนยันการลบบัญชีธนาคารนี้?')) return;
@@ -1420,11 +1642,15 @@ document.getElementById('btn-add-bank-account').addEventListener('click', async 
   const bankAcc = document.getElementById('new-bank-acc').value.trim();
   const bankOwner = document.getElementById('new-bank-owner').value.trim();
   if(!bankName || !bankAcc){ alert('กรุณากรอกชื่อธนาคารและเลขที่บัญชี'); return; }
-  state.bankAccounts.push({ id: uid(), branchId, bankName, bankAcc, bankOwner });
+  const docNumbering = document.getElementById('new-bank-doc-numbering').value;
+  const withholdingTax = document.getElementById('new-bank-withholding').value;
+  state.bankAccounts.push({ id: uid(), branchId, bankName, bankAcc, bankOwner, docNumbering, withholdingTax });
   await saveState();
   document.getElementById('new-bank-name').value = '';
   document.getElementById('new-bank-acc').value = '';
   document.getElementById('new-bank-owner').value = '';
+  document.getElementById('new-bank-doc-numbering').value = 'shared';
+  document.getElementById('new-bank-withholding').value = 'none';
   renderBranchBankList(branchId);
 });
 
@@ -1438,6 +1664,9 @@ function openBranchForm(branchId){
   document.getElementById('branch-address').value = b ? (b.address||'') : '';
   document.getElementById('branch-phone').value = b ? (b.phone||'') : '';
   document.getElementById('branch-code').value = b ? (b.code||'') : '';
+  document.getElementById('branch-staff').value = b ? (b.staff||'') : '';
+  document.getElementById('branch-sig-key').value = b ? (b.signatureKey||'') : '';
+  showBranchSigPreview(b ? b.signatureKey : '');
   document.getElementById('btn-delete-branch').style.display = b ? 'inline-flex' : 'none';
   document.getElementById('branch-bank-section').style.display = b ? '' : 'none';
   if(b) renderBranchBankList(b.id);
@@ -1455,6 +1684,8 @@ document.getElementById('btn-save-branch').addEventListener('click', async ()=>{
     address: document.getElementById('branch-address').value.trim(),
     phone: document.getElementById('branch-phone').value.trim(),
     code: document.getElementById('branch-code').value.trim(),
+    staff: document.getElementById('branch-staff').value.trim(),
+    signatureKey: document.getElementById('branch-sig-key').value,
   };
   if(id){
     const idx = state.branches.findIndex(x=>x.id===id);
@@ -1580,6 +1811,7 @@ function renderCases(){
       <div class="case-meta">
         ${c.branchId ? `<div>สาขา &nbsp;<b>${escapeHtml(branchName(c.branchId))}</b>${orgOfBranch(c.branchId) ? ' <span style="color:var(--ink-faint);">('+escapeHtml(orgOfBranch(c.branchId))+')</span>' : ''}</div>` : ''}
         ${c.admissionDate ? `<div>วันที่เข้ารับบริการ &nbsp;<b>${new Date(c.admissionDate+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'})}</b></div>` : ''}
+        ${c.dueDateOverride ? `<div>วันครบกำหนดชำระ (กำหนดเอง) &nbsp;<b>${new Date(c.dueDateOverride+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'})}</b></div>` : ''}
         ${c.healthInfo ? `<div>โรคประจำตัว &nbsp;<b>${escapeHtml(c.healthInfo)}</b></div>` : ''}
         ${c.allergy ? `<div>แพ้ยา &nbsp;<b>${escapeHtml(c.allergy)}</b></div>` : ''}
         <div>ค่าบริการรายเดือน &nbsp;<b>${thb(c.monthlyFee)}</b></div>
@@ -1728,6 +1960,11 @@ function openCaseForm(caseId, defaultBranchId){
   document.getElementById('case-emergency-phone').value = c ? (c.emergencyPhone||'') : '';
   document.getElementById('case-fee').value = c ? c.monthlyFee : '';
   document.getElementById('case-admission-date').value = c ? (c.admissionDate||'') : '';
+  document.getElementById('case-due-date').value = c ? (c.dueDateOverride||'') : '';
+  document.getElementById('case-withholding-override').value = c ? (c.withholdingOverride||'') : '';
+  document.getElementById('case-address').value = c ? (c.address||'') : '';
+  document.getElementById('case-phone').value = c ? (c.phone||'') : '';
+  document.getElementById('case-tax-id').value = c ? (c.taxId||'') : '';
   populateCaseBankAccountSelect(document.getElementById('case-branch').value, c ? c.bankAccountId : '');
   document.getElementById('case-photo-key').value = c ? (c.photoKey||'') : '';
   showCasePhotoPreview(c ? c.photoKey : '');
@@ -1741,7 +1978,9 @@ document.getElementById('btn-save-case').addEventListener('click', async ()=>{
   if(!name){ alert('กรุณากรอกชื่อเคส'); return; }
   const admissionDate = document.getElementById('case-admission-date').value;
   if(!admissionDate){ alert('กรุณาระบุวันที่เข้ารับบริการ'); return; }
-  const dueDay = Math.min(28, Math.max(1, new Date(admissionDate+'T00:00:00').getDate()));
+  const dueDateOverride = document.getElementById('case-due-date').value;
+  const dueDaySource = dueDateOverride || admissionDate; // ถ้าไม่ระบุวันครบกำหนดชำระ ให้ยึดวันเข้ารับบริการแทน
+  const dueDay = Math.min(28, Math.max(1, new Date(dueDaySource+'T00:00:00').getDate()));
   const data = {
     id,
     name,
@@ -1754,7 +1993,12 @@ document.getElementById('btn-save-case').addEventListener('click', async ()=>{
     emergencyPhone: document.getElementById('case-emergency-phone').value.trim(),
     monthlyFee: Number(document.getElementById('case-fee').value) || 0,
     admissionDate,
+    dueDateOverride,
     dueDay,
+    withholdingOverride: document.getElementById('case-withholding-override').value,
+    address: document.getElementById('case-address').value.trim(),
+    phone: document.getElementById('case-phone').value.trim(),
+    taxId: document.getElementById('case-tax-id').value.trim(),
     photoKey: document.getElementById('case-photo-key').value,
   };
   const bankAccountId = document.getElementById('case-bank-account').value;
@@ -2213,7 +2457,7 @@ function openAdhocBillForm(caseId, billId){
   document.getElementById('adhoc-item-amount').value = '';
   updateAdhocItemHint();
   renderAdhocItemsList();
-  document.getElementById('btn-delete-adhoc-bill').style.display = b ? 'inline-flex' : 'none';
+  document.getElementById('btn-delete-adhoc-bill').style.display = (b && isManagerUp()) ? 'inline-flex' : 'none';
   openOverlay('overlay-adhoc-bill');
 }
 
@@ -2348,11 +2592,14 @@ async function showAdhocInvoice(billId){
   const b = state.adhocBills.find(x=>x.id===billId);
   const c = state.cases.find(x=>x.id===b.caseId);
   const org = orgForCase(c);
+  const branch = branchForCase(c);
   const {subtotal, discount, net} = computeAdhocBillTotal(b);
+  const wht = computeWithholding(net, c);
+  const finalNet = Math.max(net - wht, 0);
   const invoiceNo = await ensureAdhocInvoiceNo(billId);
   const fields = `เลขที่เอกสาร:<span class="fval">${invoiceNo}</span><br>
     ชื่อ/Patient Name:<span class="fval">${escapeHtml(c.name)}</span><br>
-    วันที่/Date:<span class="fval">${b.billDate ? thaiDateLong(new Date(b.billDate+'T00:00:00')) : thaiDateLong(new Date())}</span>`;
+    วันที่/Date:<span class="fval">${b.billDate ? thaiDateLong(new Date(b.billDate+'T00:00:00')) : thaiDateLong(new Date())}</span>${patientFieldsExtra(c)}`;
   const discountRow = discount > 0 ? `
       <tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">ส่วนลด</span><span class="label-th">Discount</span></td>
@@ -2371,25 +2618,26 @@ async function showAdhocInvoice(billId){
       <tbody>${adhocDocItemRows(b, 5)}</tbody>
     </table>
     <table class="lh-table" style="border-top:none;">
-      ${discount > 0 ? `<tr class="lh-foot-row">
+      ${(discount > 0 || wht > 0) ? `<tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">ยอดรวมก่อนหักส่วนลด</span><span class="label-th">Subtotal</span></td>
         <td class="amt" style="width:150px;">${thb(subtotal)}</td>
       </tr>` : ''}
       ${discountRow}
+      ${withholdingRow(wht)}
       <tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงิน</span><span class="label-th">รวมทั้งสิ้น</span></td>
-        <td class="amt" style="width:150px;">${thb(net)}</td>
+        <td class="amt" style="width:150px;">${thb(finalNet)}</td>
       </tr>
       <tr class="lh-foot-row">
-        <td><span class="en">Total Amount in letters</span><br>${bahtText(net)}</td>
-        <td class="amt" style="width:150px;"><span class="en">Total</span><br>${thb(net)}</td>
+        <td><span class="en">Total Amount in letters</span><br>${bahtText(finalNet)}</td>
+        <td class="amt" style="width:150px;"><span class="en">Total</span><br>${thb(finalNet)}</td>
       </tr>
     </table>
     ${c.bankName ? `<div class="doc-bank" style="margin-top:12px;">
       <b>ช่องทางการชำระเงิน</b><br>
       ธนาคาร ${escapeHtml(c.bankName)} · เลขที่บัญชี ${escapeHtml(c.bankAcc || '—')} · ชื่อบัญชี ${escapeHtml(c.bankOwner || '—')}
     </div>` : ''}
-    ${letterheadSign(org)}
+    ${letterheadSign(org, branch)}
   `;
   openOverlay('overlay-doc');
 }
@@ -2397,12 +2645,15 @@ function showAdhocReceipt(billId){
   const b = state.adhocBills.find(x=>x.id===billId);
   const c = state.cases.find(x=>x.id===b.caseId);
   const org = orgForCase(c);
+  const branch = branchForCase(c);
   const {subtotal, discount, net} = computeAdhocBillTotal(b);
-  const amountReceived = (b.paidAmount != null && Math.abs(b.paidAmount - net) > 0.01) ? b.paidAmount : net;
-  const receivedDiffers = Math.abs(amountReceived - net) > 0.01;
+  const wht = computeWithholding(net, c);
+  const finalNet = Math.max(net - wht, 0);
+  const amountReceived = (b.paidAmount != null && Math.abs(b.paidAmount - finalNet) > 0.01) ? b.paidAmount : finalNet;
+  const receivedDiffers = Math.abs(amountReceived - finalNet) > 0.01;
   const fields = `เลขที่เอกสาร:<span class="fval">${b.receiptNo || '—'}</span><br>
     ชื่อ/Patient Name:<span class="fval">${escapeHtml(c.name)}</span><br>
-    วันที่/Date:<span class="fval">${b.paidDate ? thaiDateLong(new Date(b.paidDate)) : '—'}</span>`;
+    วันที่/Date:<span class="fval">${b.paidDate ? thaiDateLong(new Date(b.paidDate)) : '—'}</span>${patientFieldsExtra(c)}`;
   const discountRow = discount > 0 ? `
       <tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">ส่วนลด</span><span class="label-th">Discount</span></td>
@@ -2431,22 +2682,20 @@ function showAdhocReceipt(billId){
         <td class="amt" style="width:150px;">${thb(subtotal)}</td>
       </tr>
       ${discountRow}
+      ${withholdingRow(wht)}
       <tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงิน</span><span class="label-th">รวมทั้งสิ้น</span></td>
-        <td class="amt" style="width:150px;">${thb(net)}</td>
+        <td class="amt" style="width:150px;">${thb(finalNet)}</td>
       </tr>
       <tr class="lh-foot-row">
-        <td><span class="en">Total Amount in letters</span><br>${bahtText(net)}</td>
-        <td class="amt" style="width:150px;"><span class="en">Total</span><br>${thb(net)}</td>
+        <td><span class="en">Total Amount in letters</span><br>${bahtText(finalNet)}</td>
+        <td class="amt" style="width:150px;"><span class="en">Total</span><br>${thb(finalNet)}</td>
       </tr>
       ${receivedRow}
     </table>
-    <div class="lh-sign" style="margin-top:60px;">
-      <div class="lh-sign-box">
-        <div class="lh-sign-line"></div>
-        <div class="lh-sign-name">${escapeHtml((org && org.staff) || '')}</div>
-        <div class="lh-sign-role">เจ้าหน้าที่</div>
-      </div>
+    <div class="lh-sign" style="margin-top:60px;justify-content:space-between;">
+      ${signatureBoxPayer()}
+      ${signatureBox(org, branch)}
     </div>
   `;
   openOverlay('overlay-doc');
@@ -2471,6 +2720,10 @@ function paymentStatus(c, ym){
   return today > due ? 'overdue' : 'due';
 }
 
+function isManagerUp(){ return currentUser && (currentUser.role === 'admin' || currentUser.role === 'manager'); }
+function isStaffRole(){ return currentUser && currentUser.role === 'staff'; }
+function isAccountantRole(){ return currentUser && currentUser.role === 'accountant'; }
+
 function renderSummary(){
   const body = document.getElementById('summary-body');
   if(state.cases.length === 0){
@@ -2485,39 +2738,60 @@ function renderSummary(){
     return;
   }
   const ym = document.getElementById('summary-month-select').value || currentMonthStr();
-  const rows = cases.map(c=>{
+  const caseIds = new Set(cases.map(c=>c.id));
+  const monthlyRows = cases.map(c=>{
     const {other, total} = computeCaseTotal(c, ym);
     const status = paymentStatus(c, ym);
     const p = state.payments[key(c.id,ym)];
     const due = dueDateForMonth(c, ym);
+    return { kind:'monthly', c, other, total, status, p, dueLabel: `ครบกำหนด ${due.toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'})}` };
+  });
+  const adhocRows = state.adhocBills
+    .filter(b=>caseIds.has(b.caseId) && b.billDate && b.billDate.slice(0,7) === ym)
+    .map(b=>{
+      const c = cases.find(x=>x.id===b.caseId);
+      const { net } = computeAdhocBillTotal(b);
+      const dueLabel = `บิลพิเศษ ${b.billDate ? new Date(b.billDate+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'}) : ''}${b.note ? ' · '+escapeHtml(b.note) : ''}`;
+      return { kind:'adhoc', c, bill:b, other:0, total:net, status: b.paid ? 'paid' : 'due', p:b, dueLabel };
+    });
+  const summaryRows = monthlyRows.concat(adhocRows);
+
+  const rows = summaryRows.map(row=>{
+    const { kind, c, other, total, status, p, dueLabel } = row;
     const tag = status==='paid'
       ? `<span class="tag tag-paid">ชำระแล้ว</span>`
       : status==='overdue'
         ? `<span class="tag tag-overdue">เกินกำหนด</span>`
         : `<span class="tag tag-due">รอชำระ</span>`;
+    const invoiceAttr = kind === 'monthly' ? `data-invoice="${c.id}|${ym}"` : `data-adhoc-invoice="${row.bill.id}"`;
+    const receiptAttr = kind === 'monthly' ? `data-receipt="${c.id}|${ym}"` : `data-adhoc-receipt="${row.bill.id}"`;
+    const markpaidAttr = kind === 'monthly' ? `data-markpaid="${c.id}|${ym}"` : `data-adhoc-markpaid="${row.bill.id}"`;
+    const delAttr = kind === 'monthly' ? `data-del-monthly-bill="${c.id}|${ym}"` : `data-del-adhoc-bill="${row.bill.id}"`;
+    const delBtn = isManagerUp() ? `<button class="btn btn-sm btn-ghost btn-danger" ${delAttr} title="ลบบิลนี้ทิ้งทั้งหมด (กู้คืนไม่ได้)">ลบบิล</button>` : '';
     return `<tr class="row-hover">
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="avatar" style="width:30px;height:30px;font-size:12px;background:${colorFor(c.id)}">${initials(c.name).toUpperCase()}</div>
-          <div><div style="font-weight:500;">${escapeHtml(c.name)}</div><div style="font-size:11.5px;color:var(--ink-soft);">ครบกำหนด ${due.toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'})}</div></div>
+          <div><div style="font-weight:500;">${escapeHtml(c.name)}</div><div style="font-size:11.5px;color:var(--ink-soft);">${dueLabel}</div></div>
         </div>
       </td>
-      <td class="num">${thb(c.monthlyFee)}</td>
+      <td class="num">${kind==='monthly' ? thb(c.monthlyFee) : '—'}</td>
       <td class="num">${thb(other)}</td>
       <td class="num" style="font-weight:600;">${thb(total)}</td>
       <td>${tag}</td>
       <td>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn btn-sm" data-invoice="${c.id}|${ym}">ใบเรียกเก็บ</button>
+          <button class="btn btn-sm" ${invoiceAttr}>ใบเรียกเก็บ</button>
           ${status==='paid'
-            ? `<button class="btn btn-sm" data-receipt="${c.id}|${ym}">ใบเสร็จ</button>`
-            : `<button class="btn btn-sm btn-primary" data-markpaid="${c.id}|${ym}">บันทึกชำระ</button>`}
+            ? `<button class="btn btn-sm" ${receiptAttr}>ใบเสร็จ</button>${p && p.slipKey ? `<button class="btn btn-sm btn-ghost" data-view-slip="${p.slipKey}">ดูสลิป</button>` : ''}`
+            : `<button class="btn btn-sm btn-primary" ${markpaidAttr}>บันทึกชำระ</button>`}
+          ${delBtn}
         </div>
       </td>
     </tr>`;
   }).join('');
 
-  const grand = cases.reduce((s,c)=>s+computeCaseTotal(c,ym).total,0);
+  const grand = summaryRows.reduce((s,row)=>s+row.total,0);
 
   body.innerHTML = `
     <table>
@@ -2526,9 +2800,9 @@ function renderSummary(){
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div style="text-align:right;margin-top:12px;font-size:14px;color:var(--ink-soft);">
-      ยอดรวมทุกเคสในเดือนนี้ &nbsp; <b style="color:var(--ink);font-size:16px;">${thb(grand)}</b>
-    </div>
+    ${isAccountantRole() ? '' : `<div style="text-align:right;margin-top:12px;font-size:14px;color:var(--ink-soft);">
+      ยอดรวมทุกเคสในเดือนนี้ (รวมบิลพิเศษ) &nbsp; <b style="color:var(--ink);font-size:16px;">${thb(grand)}</b>
+    </div>`}
   `;
 
   body.querySelectorAll('[data-invoice]').forEach(b=>{
@@ -2549,6 +2823,47 @@ function renderSummary(){
       openPayForm(cid, m);
     });
   });
+  body.querySelectorAll('[data-view-slip]').forEach(b=>{
+    b.addEventListener('click', ()=> openSlipViewer(b.dataset.viewSlip));
+  });
+  body.querySelectorAll('[data-adhoc-invoice]').forEach(b=>{
+    b.addEventListener('click', ()=> showAdhocInvoice(b.dataset.adhocInvoice));
+  });
+  body.querySelectorAll('[data-adhoc-receipt]').forEach(b=>{
+    b.addEventListener('click', ()=> showAdhocReceipt(b.dataset.adhocReceipt));
+  });
+  body.querySelectorAll('[data-adhoc-markpaid]').forEach(b=>{
+    b.addEventListener('click', ()=> openAdhocPayForm(b.dataset.adhocMarkpaid));
+  });
+  body.querySelectorAll('[data-del-monthly-bill]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const [cid, m] = b.dataset.delMonthlyBill.split('|');
+      const c = state.cases.find(x=>x.id===cid);
+      if(!confirm(`ยืนยันลบบิลของ "${c ? c.name : ''}" เดือนนี้ทั้งหมด?\nจะลบสถานะการชำระเงิน เลขที่เอกสาร และรายการค่าใช้จ่ายอื่นๆ ที่บันทึกไว้ในเดือนนี้ทั้งหมด (กู้คืนไม่ได้)`)) return;
+      const k = key(cid, m);
+      delete state.payments[k];
+      delete state.entries[k];
+      delete state.feeToggles[k];
+      await saveState();
+      renderSummary();
+      renderBills();
+      renderDocsSummary();
+    });
+  });
+  body.querySelectorAll('[data-del-adhoc-bill]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const billId = b.dataset.delAdhocBill;
+      const bill = state.adhocBills.find(x=>x.id===billId);
+      const c = bill ? state.cases.find(x=>x.id===bill.caseId) : null;
+      if(!confirm(`ยืนยันลบบิลพิเศษของ "${c ? c.name : ''}" นี้ทั้งหมด?\n(กู้คืนไม่ได้)`)) return;
+      state.adhocBills = state.adhocBills.filter(x=>x.id!==billId);
+      await saveState();
+      renderSummary();
+      renderBills();
+      renderDocsSummary();
+      if(c) renderAdhocBillList(c.id);
+    });
+  });
 }
 
 /* ---------- BILLS VIEW (บิลค้างชำระ — รวมบิลรายเดือน + บิลพิเศษระหว่างเดือน) ---------- */
@@ -2563,9 +2878,17 @@ function renderBills(){
   const cases = (branchFilter ? state.cases.filter(c=>c.branchId===branchFilter) : state.cases).filter(c=>!c.movedOut);
   const ym = document.getElementById('bills-month-select').value || currentMonthStr();
 
+  const today = new Date(); today.setHours(0,0,0,0);
   const monthlyRows = cases
-    .map(c=>({ kind:'monthly', c, status: paymentStatus(c, ym), total: computeCaseTotal(c, ym).total, dueLabel: dueDateForMonth(c, ym).toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'}) }))
-    .filter(x=>x.status !== 'paid');
+    .map(c=>{
+      const due = dueDateForMonth(c, ym); due.setHours(0,0,0,0);
+      return { kind:'monthly', c, status: paymentStatus(c, ym), total: computeCaseTotal(c, ym).total, due, dueLabel: due.toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'}) };
+    })
+    .filter(x=>x.status !== 'paid')
+    .filter(x=>{
+      const diffDays = Math.round((x.due - today) / 86400000);
+      return diffDays <= 5; // เริ่มโชว์ตั้งแต่ 5 วันก่อนครบกำหนด (รวมถึงที่เกินกำหนดไปแล้ว)
+    });
 
   const adhocRows = state.adhocBills
     .filter(b=>!b.paid)
@@ -2621,9 +2944,9 @@ function renderBills(){
       <thead><tr><th>เคส</th><th>ยอดที่ต้องชำระ</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div style="text-align:right;margin-top:12px;font-size:14px;color:var(--ink-soft);">
+    ${isStaffRole() ? '' : `<div style="text-align:right;margin-top:12px;font-size:14px;color:var(--ink-soft);">
       ยอดค้างชำระรวม &nbsp; <b style="color:var(--ink);font-size:16px;">${thb(grandOutstanding)}</b>
-    </div>
+    </div>`}
   `;
 
   body.querySelectorAll('[data-bill-invoice]').forEach(b=>{
@@ -2690,10 +3013,47 @@ function renderDocsSummary(){
     if(b.receiptNo && b.paidDate && b.paidDate.slice(0,7) === ym){
       receiptRows.push({ no: b.receiptNo, caseName: c.name, branchId: c.branchId, date: b.paidDate, amount: b.paidAmount ?? net });
     }
+    // ยังไม่ออกใบแจ้งยอด (นับตามวันที่ออกบิล ถ้ามี ไม่งั้นนับเป็นเดือนปัจจุบันที่กำลังดู)
+    if(!b.invoiceNo && (b.billDate ? b.billDate.slice(0,7) === ym : ym === currentMonthStr())){
+      invoiceRows.push({ no: '', pending: true, caseName: c.name, branchId: c.branchId, date: b.billDate || thaiMonthYearLabel(ym), amount: net });
+    }
+    // ยังไม่ออกใบเสร็จ — ถ้าชำระแล้ว (แต่ไม่มีเลขเพราะบัญชีตั้งไม่ออกเลข) นับตามวันที่ชำระจริง, ถ้ายังไม่ชำระ นับตามวันที่ออกบิล
+    if(!b.receiptNo){
+      if(b.paid && b.paidDate && b.paidDate.slice(0,7) === ym){
+        receiptRows.push({ no: '', pending: true, note: 'ชำระแล้ว — บัญชีนี้ไม่ออกเลขที่เอกสาร', caseName: c.name, branchId: c.branchId, date: b.paidDate, amount: b.paidAmount ?? net });
+      } else if(!b.paid && b.billDate && b.billDate.slice(0,7) === ym){
+        receiptRows.push({ no: '', pending: true, note: 'ยังไม่ชำระ', caseName: c.name, branchId: c.branchId, date: b.billDate, amount: net });
+      }
+    }
   });
 
-  invoiceRows.sort((a,b)=> (a.no||'').localeCompare(b.no||''));
-  receiptRows.sort((a,b)=> (a.no||'').localeCompare(b.no||''));
+  // บิลรายเดือน — เคสที่มีค่าบริการในเดือนนี้ แต่ยังไม่ได้ออกใบแจ้งยอด/ใบเสร็จ
+  state.cases.forEach(c=>{
+    if(!caseInBranch(c)) return;
+    if(!isMonthlyFeeIncluded(c, ym)) return;
+    const total = computeCaseTotal(c, ym).total;
+    if(total <= 0) return;
+    const p = state.payments[key(c.id, ym)];
+    if(!p || !p.invoiceNo){
+      invoiceRows.push({ no: '', pending: true, caseName: c.name, branchId: c.branchId, date: thaiMonthYearLabel(ym), amount: total });
+    }
+    if(!p || !p.receiptNo){
+      const net = Math.max(total - (p?.discount || 0), 0);
+      if(p && p.paid){
+        receiptRows.push({ no: '', pending: true, note: 'ชำระแล้ว — บัญชีนี้ไม่ออกเลขที่เอกสาร', caseName: c.name, branchId: c.branchId, date: p.paidDate || thaiMonthYearLabel(ym), amount: p.paidAmount ?? net });
+      } else {
+        receiptRows.push({ no: '', pending: true, note: 'ยังไม่ชำระ', caseName: c.name, branchId: c.branchId, date: thaiMonthYearLabel(ym), amount: net });
+      }
+    }
+  });
+
+  const sortRows = rows => rows.sort((a,b)=>{
+    if(!!a.pending !== !!b.pending) return a.pending ? 1 : -1; // ออกแล้วขึ้นก่อน ยังไม่ออกอยู่ท้าย
+    if(a.pending) return (a.caseName||'').localeCompare(b.caseName||'', 'th');
+    return (a.no||'').localeCompare(b.no||'');
+  });
+  sortRows(invoiceRows);
+  sortRows(receiptRows);
 
   const fmtDate = d => {
     if(!d) return '—';
@@ -2703,13 +3063,17 @@ function renderDocsSummary(){
 
   const buildTable = (rows, emptyLabel) => {
     if(rows.length === 0) return `<div class="empty" style="padding:20px 0;"><div class="big" style="font-size:14px;">${emptyLabel}</div></div>`;
+    const issuedCount = rows.filter(r=>!r.pending).length;
+    const pendingCount = rows.length - issuedCount;
     const total = rows.reduce((s,r)=>s+(r.amount||0),0);
     return `
       <table>
         <thead><tr><th>เลขที่เอกสาร</th><th>เคส</th><th>สาขา</th><th>วันที่</th><th>ยอดเงิน</th></tr></thead>
         <tbody>${rows.map(r=>`
-          <tr>
-            <td>${escapeHtml(r.no)}</td>
+          <tr${r.pending ? ' style="opacity:.7;"' : ''}>
+            <td>${r.pending
+              ? `<span style="color:var(--warn,#b45309);font-size:12px;font-weight:600;">ยังไม่ออกเลข${r.note ? ' · '+escapeHtml(r.note) : ''}</span>`
+              : escapeHtml(r.no)}</td>
             <td>${escapeHtml(r.caseName)}</td>
             <td>${r.branchId ? escapeHtml(branchName(r.branchId)) : '—'}</td>
             <td>${escapeHtml(fmtDate(r.date))}</td>
@@ -2718,18 +3082,18 @@ function renderDocsSummary(){
         `).join('')}</tbody>
       </table>
       <div style="text-align:right;margin-top:10px;font-size:14px;color:var(--ink-soft);">
-        ยอดรวม &nbsp; <b style="color:var(--ink);font-size:16px;">${thb(total)}</b> &nbsp; (${rows.length} ฉบับ)
+        ยอดรวม &nbsp; <b style="color:var(--ink);font-size:16px;">${thb(total)}</b> &nbsp; (${issuedCount} ฉบับออกเลขแล้ว${pendingCount ? ` · ${pendingCount} ฉบับยังไม่ออกเลข` : ''})
       </div>`;
   };
 
   body.innerHTML = `
     <div class="summary-card" style="margin-bottom:16px;">
-      <h3 style="margin:0 0 12px;">ใบแจ้งยอดที่ออกในเดือนนี้</h3>
-      ${buildTable(invoiceRows, 'ยังไม่มีใบแจ้งยอดที่ออกเลขที่เอกสารในเดือนนี้')}
+      <h3 style="margin:0 0 12px;">ใบแจ้งยอดประจำเดือนนี้ (รวมที่ยังไม่ออกเลข)</h3>
+      ${buildTable(invoiceRows, 'ไม่มีบิลในเดือนนี้')}
     </div>
     <div class="summary-card">
-      <h3 style="margin:0 0 12px;">ใบเสร็จที่ออกในเดือนนี้</h3>
-      ${buildTable(receiptRows, 'ยังไม่มีใบเสร็จที่ออกเลขที่เอกสารในเดือนนี้')}
+      <h3 style="margin:0 0 12px;">ใบเสร็จประจำเดือนนี้ (รวมที่ยังไม่ออกเลข)</h3>
+      ${buildTable(receiptRows, 'ไม่มีบิลในเดือนนี้')}
     </div>
   `;
 }
@@ -2776,17 +3140,20 @@ function renderCalendar(){
     const isToday = dateStr === todayStr;
     const dayEntries = byDay[d] || [];
     const dayAppts = apptByDay[d] || [];
-    const dueChips = dayEntries.map(({c,status})=>{
-      const cls = status === 'paid' ? 'tag-paid' : status === 'overdue' ? 'tag-overdue' : 'tag-due';
-      return `<span class="cal-case-chip ${cls}" data-cal-case="${c.id}" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</span>`;
-    }).join('');
-    const apptChips = dayAppts.map(a=>{
-      const c = caseById[a.caseId];
-      const label = (c ? c.name : '?') + (a.note ? ' — '+a.note : '');
-      const cancelled = a.status === 'cancelled';
-      return `<span class="cal-appt-chip${cancelled?' cancelled':''}" data-cal-appt="${a.id}" title="${escapeHtml(label)}">🩺 ${escapeHtml(label)}</span>`;
-    }).join('');
-    cells += `<div class="cal-cell${isToday ? ' today' : ''}"><div class="cal-daynum">${d}</div>${dueChips}${apptChips}</div>`;
+    const hasItems = dayEntries.length > 0 || dayAppts.length > 0;
+
+    const dueCount = dayEntries.length;
+    const overdueCount = dayEntries.filter(e=>e.status==='overdue').length;
+    const paidCount = dayEntries.filter(e=>e.status==='paid').length;
+    const dueOnlyCount = dueCount - overdueCount - paidCount;
+    const indicators = [
+      overdueCount ? `<span class="cal-dot tag-overdue" title="เกินกำหนด ${overdueCount} เคส">${overdueCount}</span>` : '',
+      dueOnlyCount ? `<span class="cal-dot tag-due" title="รอชำระ ${dueOnlyCount} เคส">${dueOnlyCount}</span>` : '',
+      paidCount ? `<span class="cal-dot tag-paid" title="ชำระแล้ว ${paidCount} เคส">${paidCount}</span>` : '',
+      dayAppts.length ? `<span class="cal-dot cal-dot-appt" title="นัดหมอ ${dayAppts.length} รายการ">🩺${dayAppts.length}</span>` : '',
+    ].join('');
+
+    cells += `<div class="cal-cell${isToday ? ' today' : ''}${hasItems ? ' has-items' : ''}"${hasItems ? ` data-cal-day="${dateStr}"` : ''}><div class="cal-daynum">${d}</div><div class="cal-indicators">${indicators}</div></div>`;
   }
 
   body.innerHTML = `
@@ -2794,12 +3161,62 @@ function renderCalendar(){
     <div class="cal-grid">${cells}</div>
   `;
 
-  body.querySelectorAll('[data-cal-case]').forEach(chip=>{
-    chip.addEventListener('click', ()=> openPayForm(chip.dataset.calCase, ym));
+  body.querySelectorAll('[data-cal-day]').forEach(cell=>{
+    cell.addEventListener('click', ()=>{
+      const dateStr = cell.dataset.calDay;
+      const d = parseInt(dateStr.slice(8,10), 10);
+      openCalDayDetail(dateStr, byDay[d] || [], apptByDay[d] || [], caseById, ym);
+    });
   });
-  body.querySelectorAll('[data-cal-appt]').forEach(chip=>{
-    chip.addEventListener('click', ()=> openAppointmentForm(chip.dataset.calAppt));
+}
+
+function openCalDayDetail(dateStr, dayEntries, dayAppts, caseById, ym){
+  const dateLabel = new Date(dateStr+'T00:00:00').toLocaleDateString('th-TH',{weekday:'long', day:'2-digit', month:'2-digit', year:'numeric'});
+  document.getElementById('cal-day-title').textContent = dateLabel;
+
+  const dueSection = dayEntries.length ? `
+    <h4 style="font-size:12.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.02em;margin:0 0 8px;font-weight:600;">ครบกำหนดชำระ (${dayEntries.length})</h4>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px;">
+      ${dayEntries.map(({c,status})=>{
+        const tag = status === 'paid' ? `<span class="tag tag-paid">ชำระแล้ว</span>` : status === 'overdue' ? `<span class="tag tag-overdue">เกินกำหนด</span>` : `<span class="tag tag-due">รอชำระ</span>`;
+        return `<div class="entry-row" data-day-case="${c.id}" style="cursor:pointer;">
+          <div class="avatar" style="width:28px;height:28px;font-size:11px;background:${colorFor(c.id)}">${initials(c.name).toUpperCase()}</div>
+          <span class="entry-desc" style="flex:1;">${escapeHtml(c.name)}</span>
+          ${tag}
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  const apptSection = dayAppts.length ? `
+    <h4 style="font-size:12.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.02em;margin:0 0 8px;font-weight:600;">นัดหมอ (${dayAppts.length})</h4>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      ${dayAppts.map(a=>{
+        const c = caseById[a.caseId];
+        const cancelled = a.status === 'cancelled';
+        return `<div class="entry-row" data-day-appt="${a.id}" style="cursor:pointer;${cancelled?'opacity:.6;':''}">
+          <span style="font-size:16px;">🩺</span>
+          <span class="entry-desc" style="flex:1;${cancelled?'text-decoration:line-through;':''}">${escapeHtml(c ? c.name : '?')}${a.note ? ' — '+escapeHtml(a.note) : ''}</span>
+          ${cancelled ? '<span class="tag" style="background:var(--line);color:var(--ink-soft);">ยกเลิกแล้ว</span>' : ''}
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  document.getElementById('cal-day-body').innerHTML = (dueSection || apptSection) ? (dueSection + apptSection) : `<div class="empty" style="padding:12px 0;">ไม่มีรายการในวันนี้</div>`;
+
+  document.getElementById('cal-day-body').querySelectorAll('[data-day-case]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      closeOverlay('overlay-cal-day');
+      openPayForm(el.dataset.dayCase, ym);
+    });
   });
+  document.getElementById('cal-day-body').querySelectorAll('[data-day-appt]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      closeOverlay('overlay-cal-day');
+      openAppointmentForm(el.dataset.dayAppt);
+    });
+  });
+
+  openOverlay('overlay-cal-day');
 }
 
 /* ---------- นัดหมอ (APPOINTMENTS) — เพิ่ม/แก้ไข/ยกเลิก/ลบ ---------- */
@@ -2897,6 +3314,13 @@ document.getElementById('btn-delete-appointment').addEventListener('click', asyn
   renderCalendar();
   renderApptReminderBanner();
 });
+
+/* ---------- SLIP VIEWER (ดูรูปสลิปอย่างเดียว จากหน้าสรุปรายเดือน) ---------- */
+function openSlipViewer(slipKey){
+  if(!slipKey) return;
+  document.getElementById('slip-view-img').src = '/api/photo/'+encodeURIComponent(slipKey);
+  openOverlay('overlay-slip-view');
+}
 
 /* ---------- PAYMENT MODAL ---------- */
 function showPaySlipPreview(key){
@@ -3087,40 +3511,69 @@ function letterheadTop(cornerLabel, variant, org){
 function letterheadInfo(fieldsHtml, caseObj){
   const branch = caseObj && caseObj.branchId ? state.branches.find(b=>b.id===caseObj.branchId) : null;
   const org = branch ? state.orgs.find(o=>o.id===branch.orgId) : null;
+  const companyName = (org && (org.companyName || org.name)) || 'ยังไม่ได้ระบุองค์กร/สาขาสำหรับเคสนี้';
   return `
     <div class="lh-info">
       <div class="lh-org">
-        <b>${escapeHtml((org && org.name) || 'ยังไม่ได้ระบุองค์กร/สาขาสำหรับเคสนี้')}${branch ? ' — สาขา'+escapeHtml(branch.name) : ''}</b>
-        <div>ที่อยู่ : ${escapeHtml((branch && branch.address) || '—')}</div>
+        <b>${escapeHtml(companyName)}${branch ? ' — สาขา'+escapeHtml(branch.name) : ''}</b>
+        ${org && org.taxId ? `<div>เลขประจำตัวผู้เสียภาษี : ${escapeHtml(org.taxId)}</div>` : ''}
+        <div>ที่อยู่ : ${escapeHtml((branch && branch.address) || (org && org.address) || '—')}</div>
         <div>โทรศัพท์ : ${escapeHtml((branch && branch.phone) || '—')}</div>
       </div>
       <div class="lh-fields">${fieldsHtml}</div>
     </div>`;
 }
-function letterheadSign(org){
+function patientFieldsExtra(c){
+  return `${c.taxId ? `<br>เลขประจำตัวผู้เสียภาษี:<span class="fval">${escapeHtml(c.taxId)}</span>` : ''}${c.address ? `<br>ที่อยู่:<span class="fval">${escapeHtml(c.address)}</span>` : ''}${c.phone ? `<br>โทรศัพท์:<span class="fval">${escapeHtml(c.phone)}</span>` : ''}`;
+}
+// กล่องลายเซ็น: ใช้ชื่อ/ลายเซ็นของสาขาก่อน ถ้าสาขายังไม่ได้ตั้งไว้ จะใช้ของระดับองค์กรแทน
+function signatureBox(org, branch){
+  const staffName = (branch && branch.staff) || (org && org.staff) || '';
+  const sigKey = branch && branch.signatureKey;
+  return `
+    <div class="lh-sign-box">
+      ${sigKey
+        ? `<div class="lh-sign-line" style="border-bottom:none;display:flex;align-items:flex-end;justify-content:center;"><img src="/api/photo/${encodeURIComponent(sigKey)}" style="max-height:40px;max-width:100%;object-fit:contain;"></div>`
+        : `<div class="lh-sign-line"></div>`}
+      <div class="lh-sign-name">${escapeHtml(staffName)}</div>
+      <div class="lh-sign-role">เจ้าหน้าที่</div>
+    </div>`;
+}
+// กล่องลายเซ็นฝั่งผู้จ่ายเงิน — เว้นว่างให้เซ็นสดตอนรับเงิน ไม่ผูกข้อมูลล่วงหน้า
+function signatureBoxPayer(){
+  return `
+    <div class="lh-sign-box">
+      <div class="lh-sign-line"></div>
+      <div class="lh-sign-name">&nbsp;</div>
+      <div class="lh-sign-role">ผู้จ่ายเงิน</div>
+    </div>`;
+}
+function letterheadSign(org, branch){
   return `
     <div class="lh-note">" ทางศูนย์ต้องขออภัย หากท่านได้ชำระเงินดังกล่าวเรียบร้อยแล้ว "</div>
     <div class="lh-sign">
-      <div class="lh-sign-box">
-        <div class="lh-sign-line"></div>
-        <div class="lh-sign-name">${escapeHtml((org && org.staff) || '')}</div>
-        <div class="lh-sign-role">เจ้าหน้าที่</div>
-      </div>
+      ${signatureBox(org, branch)}
     </div>`;
 }
 function orgForCase(caseObj){
   const branch = caseObj && caseObj.branchId ? state.branches.find(b=>b.id===caseObj.branchId) : null;
   return branch ? state.orgs.find(o=>o.id===branch.orgId) : null;
 }
+function branchForCase(caseObj){
+  return caseObj && caseObj.branchId ? state.branches.find(b=>b.id===caseObj.branchId) : null;
+}
 
 async function showInvoice(caseId, ym){
   const c = state.cases.find(x=>x.id===caseId);
   const org = orgForCase(c);
+  const branch = branchForCase(c);
   const {total} = computeCaseTotal(c, ym);
+  const wht = computeWithholding(total, c);
+  const netTotal = Math.max(total - wht, 0);
   const invoiceNo = await ensureInvoiceNo(caseId, ym);
   const fields = `เลขที่เอกสาร:<span class="fval">${invoiceNo}</span><br>
     ชื่อ/Patient Name:<span class="fval">${escapeHtml(c.name)}</span><br>
-    วันที่/Date:<span class="fval">${thaiDateLong(new Date())}</span>`;
+    วันที่/Date:<span class="fval">${thaiDateLong(new Date())}</span>${patientFieldsExtra(c)}`;
   currentDocFilename = docFilename('ใบแจ้งยอด', c.name, invoiceNo);
   document.getElementById('print-area').innerHTML = `
     ${letterheadTop('ใบแจ้งยอดชำระ', null, org)}
@@ -3134,13 +3587,18 @@ async function showInvoice(caseId, ym){
       <tbody>${docItemRows(c, ym, 5)}</tbody>
     </table>
     <table class="lh-table" style="border-top:none;">
+      ${wht > 0 ? `<tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">ยอดรวมก่อนหัก ณ ที่จ่าย</span><span class="label-th">Subtotal</span></td>
+        <td class="amt" style="width:150px;">${thb(total)}</td>
+      </tr>` : ''}
+      ${withholdingRow(wht)}
       <tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงิน</span><span class="label-th">รวมทั้งสิ้น</span></td>
-        <td class="amt" style="width:150px;">${thb(total)}</td>
+        <td class="amt" style="width:150px;">${thb(netTotal)}</td>
       </tr>
       <tr class="lh-foot-row">
-        <td><span class="en">Total Amount in letters</span><br>${bahtText(total)}</td>
-        <td class="amt" style="width:150px;"><span class="en">Total</span><br>${thb(total)}</td>
+        <td><span class="en">Total Amount in letters</span><br>${bahtText(netTotal)}</td>
+        <td class="amt" style="width:150px;"><span class="en">Total</span><br>${thb(netTotal)}</td>
       </tr>
     </table>
     <p style="font-size:12.5px;color:var(--ink-soft);margin:14px 0 0;">ครบกำหนดชำระภายในวันที่ ${thaiDateLong(dueDateForMonth(c, ym))}</p>
@@ -3149,7 +3607,7 @@ async function showInvoice(caseId, ym){
       ธนาคาร ${escapeHtml(c.bankName)} · เลขที่บัญชี ${escapeHtml(c.bankAcc || '—')} · ชื่อบัญชี ${escapeHtml(c.bankOwner || '—')}
     </div>` : ''}
     ${org && org.note ? `<div class="lh-highlight-note">หมายเหตุ: ${escapeHtml(org.note)}</div>` : ''}
-    ${letterheadSign(org)}
+    ${letterheadSign(org, branch)}
   `;
   openOverlay('overlay-doc');
 }
@@ -3157,16 +3615,19 @@ async function showInvoice(caseId, ym){
 function showReceipt(caseId, ym){
   const c = state.cases.find(x=>x.id===caseId);
   const org = orgForCase(c);
+  const branch = branchForCase(c);
   const p = state.payments[key(caseId,ym)] || {};
   const {total} = computeCaseTotal(c, ym);
   const discount = p.discount || 0;
-  // ยอดสุทธิที่ต้องแสดงในใบเสร็จ = ยอดรวมก่อนหักลบด้วยส่วนลดเสมอ (ไม่พึ่งพา paidAmount ที่อาจบันทึกไว้คลาดเคลื่อน)
-  const netTotal = Math.max(total - discount, 0);
+  const afterDiscount = Math.max(total - discount, 0);
+  const wht = computeWithholding(afterDiscount, c);
+  // ยอดสุทธิที่ต้องแสดงในใบเสร็จ = ยอดรวมก่อนหักลบด้วยส่วนลดและหัก ณ ที่จ่ายเสมอ (ไม่พึ่งพา paidAmount ที่อาจบันทึกไว้คลาดเคลื่อน)
+  const netTotal = Math.max(afterDiscount - wht, 0);
   const amountReceived = (p.paidAmount != null && Math.abs(p.paidAmount - netTotal) > 0.01) ? p.paidAmount : netTotal;
   const receivedDiffers = Math.abs(amountReceived - netTotal) > 0.01;
   const fields = `เลขที่เอกสาร:<span class="fval">${p.receiptNo || '—'}</span><br>
     ชื่อ/Patient Name:<span class="fval">${escapeHtml(c.name)}</span><br>
-    วันที่/Date:<span class="fval">${p.paidDate ? thaiDateLong(new Date(p.paidDate)) : '—'}</span>`;
+    วันที่/Date:<span class="fval">${p.paidDate ? thaiDateLong(new Date(p.paidDate)) : '—'}</span>${patientFieldsExtra(c)}`;
   const discountRow = discount > 0 ? `
       <tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">ส่วนลด</span><span class="label-th">Discount</span></td>
@@ -3195,6 +3656,7 @@ function showReceipt(caseId, ym){
         <td class="amt" style="width:150px;">${thb(total)}</td>
       </tr>
       ${discountRow}
+      ${withholdingRow(wht)}
       <tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงิน</span><span class="label-th">รวมทั้งสิ้น</span></td>
         <td class="amt" style="width:150px;">${thb(netTotal)}</td>
@@ -3205,12 +3667,9 @@ function showReceipt(caseId, ym){
       </tr>
       ${receivedRow}
     </table>
-    <div class="lh-sign" style="margin-top:60px;">
-      <div class="lh-sign-box">
-        <div class="lh-sign-line"></div>
-        <div class="lh-sign-name">${escapeHtml((org && org.staff) || '')}</div>
-        <div class="lh-sign-role">เจ้าหน้าที่</div>
-      </div>
+    <div class="lh-sign" style="margin-top:60px;justify-content:space-between;">
+      ${signatureBoxPayer()}
+      ${signatureBox(org, branch)}
     </div>
   `;
   openOverlay('overlay-doc');
@@ -3301,9 +3760,9 @@ function renderUserList(){
     return;
   }
   list.innerHTML = users.map(u=>{
-    const roleLabel = u.role === 'admin' ? 'ผู้ดูแลระบบ' : u.role === 'manager' ? 'ผู้จัดการ' : 'พนักงานสาขา';
+    const roleLabel = u.role === 'admin' ? 'ผู้ดูแลระบบ' : u.role === 'manager' ? 'ผู้จัดการ' : u.role === 'accountant' ? 'ผู้ลงบัญชี' : 'พนักงานสาขา';
     let scopeLabel = 'เข้าถึงได้ทุกองค์กร/สาขา';
-    if(u.role === 'staff' || u.role === 'manager'){
+    if(u.role === 'staff' || u.role === 'manager' || u.role === 'accountant'){
       // ผู้ใช้ที่กำหนดผ่านตาราง user_branch_access แล้วจะมี u.branchIds — ถ้าเป็นบัญชี staff เก่าที่ยังผูกสาขาเดี่ยวแบบเดิมจะ fallback ไปใช้ u.branchId แทน
       const ids = (u.branchIds && u.branchIds.length) ? u.branchIds : (u.branchId ? [u.branchId] : []);
       const names = ids.map(id=>branchName(id)).filter(Boolean);
@@ -3317,7 +3776,7 @@ function renderUserList(){
         <span class="role-badge" style="margin-right:6px;">${roleLabel}</span>
         <span style="color:var(--ink-faint,var(--ink-soft));font-size:12px;">${scopeLabel}</span>
       </span>
-      ${(u.role === 'manager' || u.role === 'staff') ? `<button class="btn btn-sm" data-manage-access="${u.id}">จัดการสิทธิ์</button>` : ''}
+      ${(u.role === 'manager' || u.role === 'staff' || u.role === 'accountant') ? `<button class="btn btn-sm" data-manage-access="${u.id}">จัดการสิทธิ์</button>` : ''}
       <button class="btn btn-sm" data-reset-user="${u.id}">รีเซ็ตรหัสผ่าน</button>
       <button class="btn btn-sm btn-danger" data-delete-user="${u.id}">ลบ</button>
     </div>
@@ -3372,7 +3831,7 @@ function toggleUserOrgBranchFields(){
   const role = document.getElementById('user-role').value;
   // staff และ manager ใช้ตัวเลือกสาขาแบบเดียวกัน (เลือกได้หลายสาขา กำหนดโดย admin) — ไม่ใช้ dropdown องค์กร/สาขาเดี่ยวแบบเดิมแล้ว
   document.getElementById('user-org-branch-fields').style.display = 'none';
-  const showBranches = role === 'manager' || role === 'staff';
+  const showBranches = role === 'manager' || role === 'staff' || role === 'accountant';
   document.getElementById('user-manager-branches-fields').style.display = showBranches ? '' : 'none';
   if(showBranches) renderBranchCheckboxList('user-manager-branches-list', []);
 }
@@ -3399,14 +3858,14 @@ document.getElementById('btn-save-user').addEventListener('click', async ()=>{
   const password = document.getElementById('user-password').value;
   const displayName = document.getElementById('user-displayname').value.trim();
   const role = document.getElementById('user-role').value;
-  const branchIds = (role === 'manager' || role === 'staff') ? getCheckedBranchIds('user-manager-branches-list') : [];
+  const branchIds = (role === 'manager' || role === 'staff' || role === 'accountant') ? getCheckedBranchIds('user-manager-branches-list') : [];
 
   if(!username || !password || !displayName){
     errBox.textContent = 'กรุณากรอกข้อมูลให้ครบ';
     errBox.style.display = '';
     return;
   }
-  if((role === 'manager' || role === 'staff') && branchIds.length === 0){
+  if((role === 'manager' || role === 'staff' || role === 'accountant') && branchIds.length === 0){
     errBox.textContent = 'กรุณาเลือกสาขาที่เข้าถึงได้อย่างน้อย 1 สาขา';
     errBox.style.display = '';
     return;
@@ -3539,6 +3998,14 @@ function renderDueBanner(){
     const p = state.payments[key(c.id, ym)];
     if(p && p.paid) return;
     const due = dueDateForMonth(c, ym); due.setHours(0,0,0,0);
+    if(due.getTime() === today.getTime()) dueTodayCount++;
+    else if(today > due) overdueCount++;
+  });
+  state.adhocBills.forEach(b=>{
+    if(b.paid || !b.billDate) return;
+    const c = state.cases.find(x=>x.id===b.caseId);
+    if(!c || c.movedOut) return;
+    const due = new Date(b.billDate+'T00:00:00'); due.setHours(0,0,0,0);
     if(due.getTime() === today.getTime()) dueTodayCount++;
     else if(today > due) overdueCount++;
   });
