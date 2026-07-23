@@ -673,13 +673,14 @@
       <p style="font-size:12px;color:var(--ink-soft);margin:6px 0 0;" id="case-bank-hint">ยังไม่มีบัญชีธนาคารในสาขานี้ — เพิ่มได้ที่แท็บ "ตั้งค่าเอกสาร" &gt; แก้ไขสาขา</p>
     </div>
     <div class="field">
-      <label>หัก ณ ที่จ่าย (สำหรับพิมพ์ในใบเรียกเก็บ/ใบเสร็จของเคสนี้)</label>
+      <label>ภาษีมูลค่าเพิ่ม (VAT) — สำหรับพิมพ์ในใบเรียกเก็บ/ใบเสร็จของเคสนี้</label>
       <select id="case-withholding-override">
         <option value="">ใช้ตามค่าเริ่มต้นของบัญชีธนาคารที่เลือกไว้ (ปกติ)</option>
-        <option value="always">หักเสมอ (3%) ไม่ว่าบัญชีจะตั้งไว้แบบไหน</option>
-        <option value="never">ไม่หักเลย ไม่ว่าบัญชีจะตั้งไว้แบบไหน</option>
+        <option value="always">คิด VAT เสมอ (7%) ไม่ว่าบัญชีจะตั้งไว้แบบไหน</option>
+        <option value="never">ไม่คิด VAT เลย ไม่ว่าบัญชีจะตั้งไว้แบบไหน</option>
       </select>
     </div>
+    <p style="font-size:12px;color:var(--ink-soft);margin:-8px 0 14px;">VAT คิดเป็น 7% ของยอดค่าบริการ บวกเพิ่มเข้าไปในยอดที่ต้องชำระ</p>
     <div class="field-row">
       <div class="field">
         <label>ที่อยู่คนไข้ (สำหรับพิมพ์ในใบเรียกเก็บ/ใบเสร็จ)</label>
@@ -807,13 +808,13 @@
           <option value="separate">เลขที่เอกสาร: แยกชุดของบัญชีนี้</option>
           <option value="none">เลขที่เอกสาร: ไม่ต้องออกเลข</option>
         </select>
-        <select id="new-bank-withholding" title="หัก ณ ที่จ่ายเริ่มต้นสำหรับเคสที่ใช้บัญชีนี้">
-          <option value="none">หัก ณ ที่จ่าย: ไม่หัก (ปกติ)</option>
-          <option value="apply">หัก ณ ที่จ่าย: หัก 3%</option>
+        <select id="new-bank-withholding" title="ภาษีมูลค่าเพิ่ม (VAT) เริ่มต้นสำหรับเคสที่ใช้บัญชีนี้">
+          <option value="none">VAT: ไม่คิด (ปกติ)</option>
+          <option value="apply">VAT: คิด 7%</option>
         </select>
         <button class="btn btn-sm" id="btn-add-bank-account">+ เพิ่มบัญชี</button>
       </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;">บันทึกสาขาก่อน จึงจะเพิ่มบัญชีธนาคารได้ — "แยกชุด" คือนับเลขแยกต่างหากจากสาขา (รูปแบบเลขเหมือนเดิม) ส่วน "ไม่ต้องออกเลข" คือใบเสร็จ/ใบเรียกเก็บของเคสที่ใช้บัญชีนี้จะไม่มีเลขที่เอกสาร (ยังพิมพ์เอกสารได้ปกติ) — "หัก ณ ที่จ่าย" เป็นค่าเริ่มต้นของเคสที่ใช้บัญชีนี้ แต่ละเคสตั้งค่าแยกทับได้ที่ฟอร์มเคส</p>
+      <p style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;">บันทึกสาขาก่อน จึงจะเพิ่มบัญชีธนาคารได้ — "แยกชุด" คือนับเลขแยกต่างหากจากสาขา (รูปแบบเลขเหมือนเดิม) ส่วน "ไม่ต้องออกเลข" คือใบเสร็จ/ใบเรียกเก็บของเคสที่ใช้บัญชีนี้จะไม่มีเลขที่เอกสาร (ยังพิมพ์เอกสารได้ปกติ) — "VAT" เป็นค่าเริ่มต้นของเคสที่ใช้บัญชีนี้ แต่ละเคสตั้งค่าแยกทับได้ที่ฟอร์มเคส</p>
     </div>
 
     <div class="modal-foot">
@@ -1141,25 +1142,26 @@ function initials(name){
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function thb(n){ return new Intl.NumberFormat('th-TH',{style:'currency',currency:'THB',maximumFractionDigits:0}).format(n||0); }
 
-const WITHHOLDING_RATE = 0.03; // อัตราหัก ณ ที่จ่าย 3% ตามที่กำหนดไว้ (คงที่ทั้งระบบ)
-// เช็คว่าเคสนี้ต้องหัก ณ ที่จ่ายไหม: เคสตั้งค่าเองก่อน (always/never) ถ้าไม่ได้ตั้งไว้ ("") ให้ยึดตามค่า default ของบัญชีธนาคารที่ผูกกับเคส
-function isWithholdingApplied(c){
+const VAT_RATE = 0.07; // อัตราภาษีมูลค่าเพิ่ม 7% ตามที่กำหนดไว้ (คงที่ทั้งระบบ) — บวกเพิ่มเข้าไปในยอด ไม่ใช่หักออก
+// เช็คว่าเคสนี้ต้องคิด VAT ไหม: เคสตั้งค่าเองก่อน (always/never) ถ้าไม่ได้ตั้งไว้ ("") ให้ยึดตามค่า default ของบัญชีธนาคารที่ผูกกับเคส
+// หมายเหตุ: ยังใช้ชื่อคอลัมน์/ฟิลด์เดิม (withholding_*) ในฐานข้อมูลเพื่อไม่ต้อง migrate ใหม่ แต่ความหมายตอนนี้คือ VAT แล้ว
+function isVatApplied(c){
   if(!c) return false;
   if(c.withholdingOverride === 'always') return true;
   if(c.withholdingOverride === 'never') return false;
   const acc = state.bankAccounts.find(a=>a.id===c.bankAccountId);
   return !!(acc && acc.withholdingTax === 'apply');
 }
-function computeWithholding(baseAmount, c){
-  if(!isWithholdingApplied(c) || !(baseAmount > 0)) return 0;
-  return Math.round(baseAmount * WITHHOLDING_RATE * 100) / 100;
+function computeVat(baseAmount, c){
+  if(!isVatApplied(c) || !(baseAmount > 0)) return 0;
+  return Math.round(baseAmount * VAT_RATE * 100) / 100;
 }
-function withholdingRow(amount){
+function vatRow(amount){
   if(!(amount > 0)) return '';
   return `
       <tr class="lh-foot-row">
-        <td style="display:flex;justify-content:space-between;"><span class="label-th">หัก ณ ที่จ่าย (${(WITHHOLDING_RATE*100).toFixed(0)}%)</span><span class="label-th">Withholding Tax</span></td>
-        <td class="amt" style="width:150px;">-${thb(amount)}</td>
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">ภาษีมูลค่าเพิ่ม (VAT ${(VAT_RATE*100).toFixed(0)}%)</span><span class="label-th">VAT</span></td>
+        <td class="amt" style="width:150px;">${thb(amount)}</td>
       </tr>`;
 }
 function thaiDateLong(d){ return new Intl.DateTimeFormat('th-TH',{day:'numeric',month:'long',year:'numeric'}).format(d); }
@@ -1598,9 +1600,9 @@ function renderBranchBankList(branchId){
         <option value="separate" ${a.docNumbering==='separate'?'selected':''}>เลขที่เอกสาร: ${docNumberingLabel.separate}</option>
         <option value="none" ${a.docNumbering==='none'?'selected':''}>เลขที่เอกสาร: ${docNumberingLabel.none}</option>
       </select>
-      <select data-withholding="${a.id}" title="หัก ณ ที่จ่ายเริ่มต้น" style="font-size:12px;">
-        <option value="none" ${a.withholdingTax!=='apply'?'selected':''}>หัก ณ ที่จ่าย: ไม่หัก</option>
-        <option value="apply" ${a.withholdingTax==='apply'?'selected':''}>หัก ณ ที่จ่าย: หัก 3%</option>
+      <select data-withholding="${a.id}" title="ภาษีมูลค่าเพิ่ม (VAT) เริ่มต้น" style="font-size:12px;">
+        <option value="none" ${a.withholdingTax!=='apply'?'selected':''}>VAT: ไม่คิด</option>
+        <option value="apply" ${a.withholdingTax==='apply'?'selected':''}>VAT: คิด 7%</option>
       </select>
       <button class="btn btn-sm btn-ghost btn-danger" data-del-bank="${a.id}">ลบ</button>
     </div>
@@ -2594,8 +2596,8 @@ async function showAdhocInvoice(billId){
   const org = orgForCase(c);
   const branch = branchForCase(c);
   const {subtotal, discount, net} = computeAdhocBillTotal(b);
-  const wht = computeWithholding(net, c);
-  const finalNet = Math.max(net - wht, 0);
+  const vat = computeVat(net, c);
+  const finalNet = net + vat;
   const invoiceNo = await ensureAdhocInvoiceNo(billId);
   const fields = `เลขที่เอกสาร:<span class="fval">${invoiceNo}</span><br>
     ชื่อ/Patient Name:<span class="fval">${escapeHtml(c.name)}</span><br>
@@ -2618,12 +2620,12 @@ async function showAdhocInvoice(billId){
       <tbody>${adhocDocItemRows(b, 5)}</tbody>
     </table>
     <table class="lh-table" style="border-top:none;">
-      ${(discount > 0 || wht > 0) ? `<tr class="lh-foot-row">
+      ${(discount > 0 || vat > 0) ? `<tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">ยอดรวมก่อนหักส่วนลด</span><span class="label-th">Subtotal</span></td>
         <td class="amt" style="width:150px;">${thb(subtotal)}</td>
       </tr>` : ''}
       ${discountRow}
-      ${withholdingRow(wht)}
+      ${vatRow(vat)}
       <tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงิน</span><span class="label-th">รวมทั้งสิ้น</span></td>
         <td class="amt" style="width:150px;">${thb(finalNet)}</td>
@@ -2647,8 +2649,8 @@ function showAdhocReceipt(billId){
   const org = orgForCase(c);
   const branch = branchForCase(c);
   const {subtotal, discount, net} = computeAdhocBillTotal(b);
-  const wht = computeWithholding(net, c);
-  const finalNet = Math.max(net - wht, 0);
+  const vat = computeVat(net, c);
+  const finalNet = net + vat;
   const amountReceived = (b.paidAmount != null && Math.abs(b.paidAmount - finalNet) > 0.01) ? b.paidAmount : finalNet;
   const receivedDiffers = Math.abs(amountReceived - finalNet) > 0.01;
   const fields = `เลขที่เอกสาร:<span class="fval">${b.receiptNo || '—'}</span><br>
@@ -2682,7 +2684,7 @@ function showAdhocReceipt(billId){
         <td class="amt" style="width:150px;">${thb(subtotal)}</td>
       </tr>
       ${discountRow}
-      ${withholdingRow(wht)}
+      ${vatRow(vat)}
       <tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงิน</span><span class="label-th">รวมทั้งสิ้น</span></td>
         <td class="amt" style="width:150px;">${thb(finalNet)}</td>
@@ -3568,8 +3570,8 @@ async function showInvoice(caseId, ym){
   const org = orgForCase(c);
   const branch = branchForCase(c);
   const {total} = computeCaseTotal(c, ym);
-  const wht = computeWithholding(total, c);
-  const netTotal = Math.max(total - wht, 0);
+  const vat = computeVat(total, c);
+  const netTotal = total + vat;
   const invoiceNo = await ensureInvoiceNo(caseId, ym);
   const fields = `เลขที่เอกสาร:<span class="fval">${invoiceNo}</span><br>
     ชื่อ/Patient Name:<span class="fval">${escapeHtml(c.name)}</span><br>
@@ -3587,11 +3589,11 @@ async function showInvoice(caseId, ym){
       <tbody>${docItemRows(c, ym, 5)}</tbody>
     </table>
     <table class="lh-table" style="border-top:none;">
-      ${wht > 0 ? `<tr class="lh-foot-row">
-        <td style="display:flex;justify-content:space-between;"><span class="label-th">ยอดรวมก่อนหัก ณ ที่จ่าย</span><span class="label-th">Subtotal</span></td>
+      ${vat > 0 ? `<tr class="lh-foot-row">
+        <td style="display:flex;justify-content:space-between;"><span class="label-th">ยอดรวมก่อนคิด VAT</span><span class="label-th">Subtotal</span></td>
         <td class="amt" style="width:150px;">${thb(total)}</td>
       </tr>` : ''}
-      ${withholdingRow(wht)}
+      ${vatRow(vat)}
       <tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงิน</span><span class="label-th">รวมทั้งสิ้น</span></td>
         <td class="amt" style="width:150px;">${thb(netTotal)}</td>
@@ -3620,9 +3622,9 @@ function showReceipt(caseId, ym){
   const {total} = computeCaseTotal(c, ym);
   const discount = p.discount || 0;
   const afterDiscount = Math.max(total - discount, 0);
-  const wht = computeWithholding(afterDiscount, c);
-  // ยอดสุทธิที่ต้องแสดงในใบเสร็จ = ยอดรวมก่อนหักลบด้วยส่วนลดและหัก ณ ที่จ่ายเสมอ (ไม่พึ่งพา paidAmount ที่อาจบันทึกไว้คลาดเคลื่อน)
-  const netTotal = Math.max(afterDiscount - wht, 0);
+  const vat = computeVat(afterDiscount, c);
+  // ยอดสุทธิที่ต้องแสดงในใบเสร็จ = ยอดรวมหลังหักส่วนลด บวก VAT เสมอ (ไม่พึ่งพา paidAmount ที่อาจบันทึกไว้คลาดเคลื่อน)
+  const netTotal = afterDiscount + vat;
   const amountReceived = (p.paidAmount != null && Math.abs(p.paidAmount - netTotal) > 0.01) ? p.paidAmount : netTotal;
   const receivedDiffers = Math.abs(amountReceived - netTotal) > 0.01;
   const fields = `เลขที่เอกสาร:<span class="fval">${p.receiptNo || '—'}</span><br>
@@ -3656,7 +3658,7 @@ function showReceipt(caseId, ym){
         <td class="amt" style="width:150px;">${thb(total)}</td>
       </tr>
       ${discountRow}
-      ${withholdingRow(wht)}
+      ${vatRow(vat)}
       <tr class="lh-foot-row">
         <td style="display:flex;justify-content:space-between;"><span class="label-th">จำนวนเงิน</span><span class="label-th">รวมทั้งสิ้น</span></td>
         <td class="amt" style="width:150px;">${thb(netTotal)}</td>
