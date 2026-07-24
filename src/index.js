@@ -254,8 +254,8 @@ async function handleUsers(request, env, url, currentUser) {
     const branchIds = Array.isArray(body.branchIds) ? body.branchIds : [];
     const existing = await env.DB.prepare("SELECT id, role FROM users WHERE id = ?").bind(id).first();
     if (!existing) return json({ error: "ไม่พบผู้ใช้นี้" }, 404);
-    if (existing.role !== "manager" && existing.role !== "staff") {
-      return json({ error: "กำหนดสิทธิ์สาขาได้เฉพาะผู้ใช้ role manager หรือ staff เท่านั้น" }, 400);
+    if (existing.role !== "manager" && existing.role !== "staff" && existing.role !== "accountant") {
+      return json({ error: "กำหนดสิทธิ์สาขาได้เฉพาะผู้ใช้ role manager, staff หรือ ผู้ลงบัญชี เท่านั้น" }, 400);
     }
 
     if (branchIds.length) {
