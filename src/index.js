@@ -97,6 +97,14 @@ export default {
         return await handleUploadPhoto(request, env, `org-${parts[2]}-`);
       }
 
+      if (url.pathname.startsWith("/api/branches/") && url.pathname.endsWith("/logo") && request.method === "POST") {
+        const user = await getUser(request, env);
+        if (!user) return json({ error: "unauthorized" }, 401);
+        if (user.role !== "admin") return json({ error: "forbidden — เฉพาะผู้ดูแลระบบเท่านั้น" }, 403);
+        const parts = url.pathname.split("/").filter(Boolean); // ["api","branches",branchId,"logo"]
+        return await handleUploadPhoto(request, env, `branch-logo-${parts[2]}-`);
+      }
+
       if (url.pathname.startsWith("/api/branches/") && url.pathname.endsWith("/signature") && request.method === "POST") {
         const user = await getUser(request, env);
         if (!user) return json({ error: "unauthorized" }, 401);
@@ -556,7 +564,7 @@ function base64urlDecode(str) {
 
 /* ================= DATA MAPPING ================= */
 
-const mapOrg = (o) => ({ id: o.id, name: o.name, companyName: o.company_name || "", taxId: o.tax_id || "", address: o.address || "", logo: o.logo || "", logoKey: o.logo_key || "", staff: o.staff || "", note: o.note || "" });
+const mapOrg = (o) => ({ id: o.id, name: o.name, taxId: o.tax_id || "", address: o.address || "", phone: o.phone || "", staff: o.staff || "" });
 const mapBranch = (b) => ({
   id: b.id,
   orgId: b.org_id,
@@ -566,6 +574,9 @@ const mapBranch = (b) => ({
   code: b.code || "",
   staff: b.staff || "",
   signatureKey: b.signature_key || "",
+  logo: b.logo || "",
+  logoKey: b.logo_key || "",
+  note: b.note || "",
 });
 const mapBankAccount = (a) => ({
   id: a.id,
@@ -683,10 +694,10 @@ async function saveState(db, state) {
   ];
 
   for (const o of state.orgs || []) {
-    stmts.push(db.prepare("INSERT INTO orgs (id,name,company_name,tax_id,address,logo,logo_key,staff,note) VALUES (?,?,?,?,?,?,?,?,?)").bind(o.id, o.name || "", o.companyName || "", o.taxId || "", o.address || "", o.logo || "", o.logoKey || "", o.staff || "", o.note || ""));
+    stmts.push(db.prepare("INSERT INTO orgs (id,name,tax_id,address,phone,staff) VALUES (?,?,?,?,?,?)").bind(o.id, o.name || "", o.taxId || "", o.address || "", o.phone || "", o.staff || ""));
   }
   for (const b of state.branches || []) {
-    stmts.push(db.prepare("INSERT INTO branches (id,org_id,name,address,phone,code,staff,signature_key) VALUES (?,?,?,?,?,?,?,?)").bind(b.id, b.orgId, b.name || "", b.address || "", b.phone || "", b.code || "", b.staff || "", b.signatureKey || ""));
+    stmts.push(db.prepare("INSERT INTO branches (id,org_id,name,address,phone,code,staff,signature_key,logo,logo_key,note) VALUES (?,?,?,?,?,?,?,?,?,?,?)").bind(b.id, b.orgId, b.name || "", b.address || "", b.phone || "", b.code || "", b.staff || "", b.signatureKey || "", b.logo || "", b.logoKey || "", b.note || ""));
   }
   for (const a of state.bankAccounts || []) {
     stmts.push(
