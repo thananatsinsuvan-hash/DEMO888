@@ -421,7 +421,7 @@
     </div>
     <button class="nav-btn active" data-view="cases"><span class="nav-dot"></span>รายชื่อเคส</button>
     <button class="nav-btn" data-view="entries"><span class="nav-dot"></span>บันทึกค่าใช้จ่าย</button>
-    <button class="nav-btn" data-view="bills"><span class="nav-dot"></span>บิลค้างชำระ</button>
+    <button class="nav-btn" data-view="bills" data-hide-for-staff><span class="nav-dot"></span>บิลค้างชำระ</button>
     <button class="nav-btn" id="nav-calendar" data-view="calendar"><span class="nav-dot"></span>ปฏิทินครบกำหนด</button>
     <button class="nav-btn" id="nav-summary" data-view="summary" data-accountant-up><span class="nav-dot"></span>สรุปรายเดือน</button>
     <button class="nav-btn" id="nav-docs-summary" data-view="docs-summary" data-manager-up><span class="nav-dot"></span>สรุปเอกสาร</button>
@@ -952,6 +952,10 @@
       <label>รายละเอียดนัด (ไม่บังคับ)</label>
       <input type="text" id="appointment-note" placeholder="เช่น พบแพทย์ตรวจตา">
     </div>
+    <div class="field">
+      <label>พนักงานที่พาไป (ไม่บังคับ)</label>
+      <input type="text" id="appointment-staff" placeholder="ชื่อพนักงานที่พาเคสไปหาหมอ">
+    </div>
     <p id="appointment-status-note" style="display:none;font-size:12.5px;color:var(--ink-soft);margin:-4px 0 10px;"></p>
     <div class="modal-foot">
       <button class="btn btn-danger" id="btn-delete-appointment" style="margin-right:auto;display:none;">ลบนัดนี้ถาวร</button>
@@ -1307,6 +1311,7 @@ function applyRolePermissions(){
   const isAdmin = currentUser && currentUser.role === 'admin';
   const isManager = currentUser && currentUser.role === 'manager';
   const isAccountant = currentUser && currentUser.role === 'accountant';
+  const isStaff = currentUser && currentUser.role === 'staff';
   const roleLabel = isAdmin ? 'ผู้ดูแลระบบ' : isManager ? 'ผู้จัดการ' : isAccountant ? 'ผู้ลงบัญชี' : 'พนักงานสาขา';
   document.getElementById('sidebar-user-name').textContent = currentUser ? currentUser.displayName : '';
   document.getElementById('sidebar-user-role').innerHTML = currentUser
@@ -1320,6 +1325,16 @@ function applyRolePermissions(){
   document.querySelectorAll('[data-accountant-up]').forEach(el=>{
     el.style.display = (isAdmin || isManager || isAccountant) ? '' : 'none';
   });
+  document.querySelectorAll('[data-hide-for-staff]').forEach(el=>{
+    el.style.display = isStaff ? 'none' : '';
+  });
+  // staff เห็นได้แค่ "รายชื่อเคส" กับ "ปฏิทิน" — ถ้าล็อกอินมาแล้วอยู่หน้าอื่นที่ถูกซ่อน ให้เด้งไปหน้ารายชื่อเคสแทน
+  if(isStaff){
+    const activeBtn = document.querySelector('.nav-btn.active');
+    if(activeBtn && activeBtn.hasAttribute('data-hide-for-staff')){
+      document.querySelector('[data-view="cases"]').click();
+    }
+  }
 }
 
 async function checkAuthAndBoot(){
@@ -2914,7 +2929,7 @@ function renderBills(){
     .filter(x=>x.status !== 'paid')
     .filter(x=>{
       const diffDays = Math.round((x.due - today) / 86400000);
-      return diffDays <= 5; // เริ่มโชว์ตั้งแต่ 5 วันก่อนครบกำหนด (รวมถึงที่เกินกำหนดไปแล้ว)
+      return diffDays <= 1; // เริ่มโชว์ตั้งแต่ 1 วันก่อนครบกำหนด (รวมถึงที่เกินกำหนดไปแล้ว)
     });
 
   const adhocRows = state.adhocBills
@@ -2923,11 +2938,13 @@ function renderBills(){
       const c = cases.find(x=>x.id===b.caseId);
       if(!c) return null;
       const {net} = computeAdhocBillTotal(b);
-      return { kind:'adhoc', c, bill:b, total: net, dueLabel: b.billDate ? new Date(b.billDate+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—' };
+      const due = b.billDate ? new Date(b.billDate+'T00:00:00') : new Date(today);
+      due.setHours(0,0,0,0);
+      return { kind:'adhoc', c, bill:b, total: net, due, dueLabel: b.billDate ? due.toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—' };
     })
     .filter(Boolean);
 
-  const outstanding = monthlyRows.concat(adhocRows);
+  const outstanding = monthlyRows.concat(adhocRows).sort((a,b)=> a.due - b.due);
 
   if(outstanding.length === 0){
     body.innerHTML = `<div class="empty"><div class="big">ไม่มีบิลค้างชำระ</div>ทุกบิลในเดือนนี้ชำระเรียบร้อยแล้ว (บิลพิเศษที่ค้างอยู่ก็ไม่มีเช่นกัน)</div>`;
@@ -3170,12 +3187,10 @@ function renderCalendar(){
     const hasItems = dayEntries.length > 0 || dayAppts.length > 0;
 
     const dueCount = dayEntries.length;
-    const overdueCount = dayEntries.filter(e=>e.status==='overdue').length;
     const paidCount = dayEntries.filter(e=>e.status==='paid').length;
-    const dueOnlyCount = dueCount - overdueCount - paidCount;
+    const unpaidCount = dueCount - paidCount; // รวม "เกินกำหนด" และ "รอชำระ" เป็น "ค้างชำระ" เดียว
     const indicators = [
-      overdueCount ? `<span class="cal-dot tag-overdue" title="เกินกำหนด ${overdueCount} เคส">${overdueCount}</span>` : '',
-      dueOnlyCount ? `<span class="cal-dot tag-due" title="รอชำระ ${dueOnlyCount} เคส">${dueOnlyCount}</span>` : '',
+      unpaidCount ? `<span class="cal-dot tag-overdue" title="ค้างชำระ ${unpaidCount} เคส">${unpaidCount}</span>` : '',
       paidCount ? `<span class="cal-dot tag-paid" title="ชำระแล้ว ${paidCount} เคส">${paidCount}</span>` : '',
       dayAppts.length ? `<span class="cal-dot cal-dot-appt" title="นัดหมอ ${dayAppts.length} รายการ">🩺${dayAppts.length}</span>` : '',
     ].join('');
@@ -3205,7 +3220,7 @@ function openCalDayDetail(dateStr, dayEntries, dayAppts, caseById, ym){
     <h4 style="font-size:12.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.02em;margin:0 0 8px;font-weight:600;">ครบกำหนดชำระ (${dayEntries.length})</h4>
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px;">
       ${dayEntries.map(({c,status})=>{
-        const tag = status === 'paid' ? `<span class="tag tag-paid">ชำระแล้ว</span>` : status === 'overdue' ? `<span class="tag tag-overdue">เกินกำหนด</span>` : `<span class="tag tag-due">รอชำระ</span>`;
+        const tag = status === 'paid' ? `<span class="tag tag-paid">ชำระแล้ว</span>` : `<span class="tag tag-overdue">ค้างชำระ</span>`;
         return `<div class="entry-row" data-day-case="${c.id}" style="cursor:pointer;">
           <div class="avatar" style="width:28px;height:28px;font-size:11px;background:${colorFor(c.id)}">${initials(c.name).toUpperCase()}</div>
           <span class="entry-desc" style="flex:1;">${escapeHtml(c.name)}</span>
@@ -3222,7 +3237,7 @@ function openCalDayDetail(dateStr, dayEntries, dayAppts, caseById, ym){
         const cancelled = a.status === 'cancelled';
         return `<div class="entry-row" data-day-appt="${a.id}" style="cursor:pointer;${cancelled?'opacity:.6;':''}">
           <span style="font-size:16px;">🩺</span>
-          <span class="entry-desc" style="flex:1;${cancelled?'text-decoration:line-through;':''}">${escapeHtml(c ? c.name : '?')}${a.note ? ' — '+escapeHtml(a.note) : ''}</span>
+          <span class="entry-desc" style="flex:1;${cancelled?'text-decoration:line-through;':''}">${escapeHtml(c ? c.name : '?')}${a.note ? ' — '+escapeHtml(a.note) : ''}${a.staffName ? ' · พาไปโดย '+escapeHtml(a.staffName) : ''}</span>
           ${cancelled ? '<span class="tag" style="background:var(--line);color:var(--ink-soft);">ยกเลิกแล้ว</span>' : ''}
         </div>`;
       }).join('')}
@@ -3272,6 +3287,7 @@ function openAppointmentForm(appointmentId, defaults){
   populateAppointmentCaseSelect(a ? a.caseId : (defaults && defaults.caseId));
   document.getElementById('appointment-date').value = a ? a.date : ((defaults && defaults.date) || new Date().toISOString().slice(0,10));
   document.getElementById('appointment-note').value = a ? a.note : '';
+  document.getElementById('appointment-staff').value = a ? (a.staffName||'') : '';
 
   const statusNote = document.getElementById('appointment-status-note');
   const toggleBtn = document.getElementById('btn-toggle-cancel-appointment');
@@ -3303,15 +3319,16 @@ document.getElementById('btn-save-appointment').addEventListener('click', async 
   const caseId = document.getElementById('appointment-case').value;
   const date = document.getElementById('appointment-date').value;
   const note = document.getElementById('appointment-note').value.trim();
+  const staffName = document.getElementById('appointment-staff').value.trim();
   if(!caseId){ errBox.textContent = 'กรุณาเลือกเคส'; errBox.style.display = ''; return; }
   if(!date){ errBox.textContent = 'กรุณาระบุวันที่นัด'; errBox.style.display = ''; return; }
 
   if(!state.appointments) state.appointments = [];
   const idx = id ? state.appointments.findIndex(x=>x.id===id) : -1;
   if(idx >= 0){
-    state.appointments[idx] = { ...state.appointments[idx], caseId, date, note };
+    state.appointments[idx] = { ...state.appointments[idx], caseId, date, note, staffName };
   } else {
-    state.appointments.push({ id: uid(), caseId, date, note, status: 'scheduled' });
+    state.appointments.push({ id: uid(), caseId, date, note, staffName, status: 'scheduled' });
   }
   await saveState();
   closeOverlay('overlay-appointment');
