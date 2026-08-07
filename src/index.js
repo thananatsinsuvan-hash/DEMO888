@@ -643,6 +643,7 @@ const mapAppointment = (a) => ({
   caseId: a.case_id,
   date: a.date || "",
   note: a.note || "",
+  staffName: a.staff_name || "",
   status: a.status || "scheduled",
 });
 
@@ -759,8 +760,8 @@ async function saveState(db, state) {
   for (const a of state.appointments || []) {
     stmts.push(
       db
-        .prepare("INSERT INTO appointments (id,case_id,date,note,status) VALUES (?,?,?,?,?)")
-        .bind(a.id, a.caseId, a.date || "", a.note || "", a.status || "scheduled")
+        .prepare("INSERT INTO appointments (id,case_id,date,note,staff_name,status) VALUES (?,?,?,?,?,?)")
+        .bind(a.id, a.caseId, a.date || "", a.note || "", a.staffName || "", a.status || "scheduled")
     );
   }
   await db.batch(stmts);
@@ -962,7 +963,7 @@ async function saveScopedState(db, state, branchIds) {
   for (const a of state.appointments || []) {
     if (!scopedCaseIds.includes(a.caseId)) continue;
     stmts.push(
-      db.prepare("INSERT INTO appointments (id,case_id,date,note,status) VALUES (?,?,?,?,?)").bind(a.id, a.caseId, a.date || "", a.note || "", a.status || "scheduled")
+      db.prepare("INSERT INTO appointments (id,case_id,date,note,staff_name,status) VALUES (?,?,?,?,?,?)").bind(a.id, a.caseId, a.date || "", a.note || "", a.staffName || "", a.status || "scheduled")
     );
   }
 
