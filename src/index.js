@@ -58,7 +58,7 @@ export default {
           if (user.role === "admin") {
             await saveState(env.DB, body);
           } else {
-            await saveScopedState(env.DB, body, await getAccessibleBranchIds(env.DB, user));
+            await saveScopedState(env.DB, body, await getAccessibleBranchIds(env.DB, user), user.role);
           }
           return json({ ok: true });
         }
@@ -829,8 +829,10 @@ async function loadScopedState(db, branchIds) {
 
 // staff/manager บันทึกได้เฉพาะเคส/รายการ/การชำระเงิน ที่อยู่ในสาขาที่ตนเข้าถึงได้เท่านั้น
 // จะไม่แตะตาราง orgs/branches/bank_accounts และจะไม่ลบ/แก้ข้อมูลของสาขาอื่นโดยเด็ดขาด
-async function saveScopedState(db, state, branchIds) {
+async function saveScopedState(db, state, branchIds, role) {
   if (!branchIds || !branchIds.length) throw new Error("บัญชีนี้ยังไม่มีสิทธิ์เข้าถึงสาขาใดเลย ไม่สามารถบันทึกข้อมูลได้ — กรุณาติดต่อผู้ดูแลระบบ");
+
+  const canEditCases = role !== "accountant"; // ผู้ลงบัญชีแก้ไขข้อมูลเคส (รวมค่าบริการรายเดือน) ไม่ได้ — บันทึกได้แค่รายการค่าใช้จ่าย/การชำระเงิน/บิลพิเศษ/นัดหมาย
 
   const scopedCases = (state.cases || []).filter((c) => branchIds.includes(c.branchId || ""));
   const scopedCaseIds = scopedCases.map((c) => c.id);
@@ -842,41 +844,43 @@ async function saveScopedState(db, state, branchIds) {
 
   const stmts = [];
 
-  // ลบเคส (และรายการ/การชำระเงินของเคสนั้น) ที่เคยมีในสาขานี้แต่ไม่มีในชุดข้อมูลที่ส่งมาแล้ว
-  for (const id of existingIds) {
-    if (!scopedCaseIds.includes(id)) {
-      stmts.push(db.prepare("DELETE FROM entries WHERE case_id = ?").bind(id));
-      stmts.push(db.prepare("DELETE FROM payments WHERE case_id = ?").bind(id));
-      stmts.push(db.prepare("DELETE FROM fee_toggles WHERE case_id = ?").bind(id));
-      stmts.push(db.prepare("DELETE FROM adhoc_bill_items WHERE bill_id IN (SELECT id FROM adhoc_bills WHERE case_id = ?)").bind(id));
-      stmts.push(db.prepare("DELETE FROM adhoc_bills WHERE case_id = ?").bind(id));
-      stmts.push(db.prepare("DELETE FROM appointments WHERE case_id = ?").bind(id));
-      stmts.push(db.prepare("DELETE FROM cases WHERE id = ?").bind(id));
+  if (canEditCases) {
+    // ลบเคส (และรายการ/การชำระเงินของเคสนั้น) ที่เคยมีในสาขานี้แต่ไม่มีในชุดข้อมูลที่ส่งมาแล้ว
+    for (const id of existingIds) {
+      if (!scopedCaseIds.includes(id)) {
+        stmts.push(db.prepare("DELETE FROM entries WHERE case_id = ?").bind(id));
+        stmts.push(db.prepare("DELETE FROM payments WHERE case_id = ?").bind(id));
+        stmts.push(db.prepare("DELETE FROM fee_toggles WHERE case_id = ?").bind(id));
+        stmts.push(db.prepare("DELETE FROM adhoc_bill_items WHERE bill_id IN (SELECT id FROM adhoc_bills WHERE case_id = ?)").bind(id));
+        stmts.push(db.prepare("DELETE FROM adhoc_bills WHERE case_id = ?").bind(id));
+        stmts.push(db.prepare("DELETE FROM appointments WHERE case_id = ?").bind(id));
+        stmts.push(db.prepare("DELETE FROM cases WHERE id = ?").bind(id));
+      }
     }
-  }
 
-  // เพิ่ม/แก้ไขเคสในสาขาที่ตนเข้าถึงได้ (บังคับ branch_id ให้เป็นหนึ่งในสาขาที่ตนเข้าถึงได้เสมอ ป้องกันการสวมสิทธิ์ข้ามสาขา — กรองไว้แล้วใน scopedCases)
-  for (const c of scopedCases) {
-    stmts.push(
-      db.prepare(`
-        INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner,bank_account_id,age,health_info,allergy,emergency_contact,emergency_phone,admission_date,due_date_override,withholding_override,address,phone,tax_id,bed_number,photo_key,moved_out,move_out_date)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        ON CONFLICT(id) DO UPDATE SET
-          branch_id=excluded.branch_id, name=excluded.name, note=excluded.note,
-          monthly_fee=excluded.monthly_fee, due_day=excluded.due_day,
-          bank_name=excluded.bank_name, bank_acc=excluded.bank_acc, bank_owner=excluded.bank_owner, bank_account_id=excluded.bank_account_id,
-          age=excluded.age, health_info=excluded.health_info, allergy=excluded.allergy,
-          emergency_contact=excluded.emergency_contact, emergency_phone=excluded.emergency_phone,
-          admission_date=excluded.admission_date, due_date_override=excluded.due_date_override,
-          withholding_override=excluded.withholding_override, address=excluded.address, phone=excluded.phone, tax_id=excluded.tax_id, bed_number=excluded.bed_number, photo_key=excluded.photo_key,
-          moved_out=excluded.moved_out, move_out_date=excluded.move_out_date
-      `).bind(
-        c.id, c.branchId, c.name, c.note || "", c.monthlyFee || 0, c.dueDay || 1, c.bankName || "", c.bankAcc || "", c.bankOwner || "", c.bankAccountId || null,
-        c.age ?? null, c.healthInfo || "", c.allergy || "", c.emergencyContact || "", c.emergencyPhone || "", c.admissionDate || "", c.dueDateOverride || "",
-        c.withholdingOverride || "", c.address || "", c.phone || "", c.taxId || "", c.bedNumber || "", c.photoKey || "",
-        c.movedOut ? 1 : 0, c.moveOutDate || null
-      )
-    );
+    // เพิ่ม/แก้ไขเคสในสาขาที่ตนเข้าถึงได้ (บังคับ branch_id ให้เป็นหนึ่งในสาขาที่ตนเข้าถึงได้เสมอ ป้องกันการสวมสิทธิ์ข้ามสาขา — กรองไว้แล้วใน scopedCases)
+    for (const c of scopedCases) {
+      stmts.push(
+        db.prepare(`
+          INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner,bank_account_id,age,health_info,allergy,emergency_contact,emergency_phone,admission_date,due_date_override,withholding_override,address,phone,tax_id,bed_number,photo_key,moved_out,move_out_date)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          ON CONFLICT(id) DO UPDATE SET
+            branch_id=excluded.branch_id, name=excluded.name, note=excluded.note,
+            monthly_fee=excluded.monthly_fee, due_day=excluded.due_day,
+            bank_name=excluded.bank_name, bank_acc=excluded.bank_acc, bank_owner=excluded.bank_owner, bank_account_id=excluded.bank_account_id,
+            age=excluded.age, health_info=excluded.health_info, allergy=excluded.allergy,
+            emergency_contact=excluded.emergency_contact, emergency_phone=excluded.emergency_phone,
+            admission_date=excluded.admission_date, due_date_override=excluded.due_date_override,
+            withholding_override=excluded.withholding_override, address=excluded.address, phone=excluded.phone, tax_id=excluded.tax_id, bed_number=excluded.bed_number, photo_key=excluded.photo_key,
+            moved_out=excluded.moved_out, move_out_date=excluded.move_out_date
+        `).bind(
+          c.id, c.branchId, c.name, c.note || "", c.monthlyFee || 0, c.dueDay || 1, c.bankName || "", c.bankAcc || "", c.bankOwner || "", c.bankAccountId || null,
+          c.age ?? null, c.healthInfo || "", c.allergy || "", c.emergencyContact || "", c.emergencyPhone || "", c.admissionDate || "", c.dueDateOverride || "",
+          c.withholdingOverride || "", c.address || "", c.phone || "", c.taxId || "", c.bedNumber || "", c.photoKey || "",
+          c.movedOut ? 1 : 0, c.moveOutDate || null
+        )
+      );
+    }
   }
 
   // แทนที่รายการค่าใช้จ่ายทั้งหมดของเคสในสาขาตัวเอง

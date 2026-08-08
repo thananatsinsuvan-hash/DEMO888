@@ -493,7 +493,7 @@
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-sm" id="btn-toggle-archive">คลังเก็บถาวร (เคสย้ายออก)</button>
-          <button class="btn btn-primary" id="btn-add-case"><i>+</i> เพิ่มเคสใหม่</button>
+          <button class="btn btn-primary" id="btn-add-case" data-hide-for-accountant><i>+</i> เพิ่มเคสใหม่</button>
         </div>
       </div>
       <div class="toolbar" style="align-items:flex-end;">
@@ -1200,6 +1200,10 @@
         <input type="number" id="adhoc-item-amount" placeholder="จำนวนเงิน" min="0" step="1">
         <button class="btn btn-primary btn-sm" id="btn-add-adhoc-item">+ เพิ่มรายการ</button>
       </div>
+      <label id="adhoc-item-service-charge-wrap" style="display:none;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);margin-top:8px;cursor:pointer;">
+        <input type="checkbox" id="adhoc-item-service-charge" style="width:auto;">
+        คิด Service Charge 10% ของยอดนี้ (บวกเป็นอีกหนึ่งรายการแยกต่างหาก)
+      </label>
       <p id="adhoc-item-hint" style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;"></p>
     </div>
 
@@ -1252,6 +1256,8 @@ function initials(name){
 }
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function thb(n){ return new Intl.NumberFormat('th-TH',{style:'currency',currency:'THB',maximumFractionDigits:0}).format(n||0); }
+// ผู้ลงบัญชี (accountant) ไม่เห็นตัวเลขค่าบริการรายเดือนของเคส — โชว์เป็น xxxxxx แทน
+function feeDisplay(amount){ return isAccountantRole() ? 'xxxxxx' : thb(amount); }
 
 const VAT_RATE = 0.07; // อัตราภาษีมูลค่าเพิ่ม 7% ตามที่กำหนดไว้ (คงที่ทั้งระบบ) — บวกเพิ่มเข้าไปในยอด ไม่ใช่หักออก
 // เช็คว่าเคสนี้ต้องคิด VAT ไหม: เคสตั้งค่าเองก่อน (always/never) ถ้าไม่ได้ตั้งไว้ ("") ให้ยึดตามค่า default ของบัญชีธนาคารที่ผูกกับเคส
@@ -1323,7 +1329,8 @@ const ENTRY_CATEGORIES = [
   { value: 'procedure', label: 'ค่าบริการหัตถการทางการพยาบาล (ระบุเพิ่ม)' },
   { value: 'escort',    label: 'ค่าบริการเจ้าหน้าที่พาไปพบแพทย์' },
   { value: 'physio',    label: 'ค่ากายภาพบำบัด' },
-  { value: 'medicine',  label: 'ค่าบริการจัดหาเวชภัณฑ์ (บวก service charge 10% อัตโนมัติ)' },
+  { value: 'therapy',   label: 'ค่ากิจกรรมบำบัด (ฝึกกลืน)' },
+  { value: 'medicine',  label: 'ค่าเวชภัณฑ์' },
   { value: 'other',     label: 'อื่นๆ (ระบุ)' },
 ];
 const MEDICINE_SERVICE_CHARGE_RATE = 0.10;
@@ -1338,17 +1345,17 @@ function extractDetailFromDesc(category, desc){
   if(desc && desc.startsWith(baseLabel + ' — ')) return desc.slice(baseLabel.length + 3);
   return '';
 }
-// รวมยอดรายการ "ค่าบริการจัดหาเวชภัณฑ์" ทั้งหมดในชุดรายการนี้ก่อน แล้วคิด service charge 10% เพียงครั้งเดียว
+// รวมยอดรายการ "ค่าเวชภัณฑ์" เฉพาะรายการที่ติ๊กเลือกให้คิด service charge เท่านั้น (ไม่ได้บังคับคิดทุกรายการเหมือนเดิม)
 // (ลบรายการ service charge เดิมทิ้งแล้วคำนวณใหม่ทุกครั้งที่มีการเพิ่ม/ลบรายการเวชภัณฑ์)
 function recalcMedicineServiceCharge(items){
   const filtered = (items || []).filter(it=>it.category !== 'medicine_service_charge');
-  const medicineItems = filtered.filter(it=>it.category === 'medicine');
+  const medicineItems = filtered.filter(it=>it.category === 'medicine' && it.serviceCharge);
   const medicineTotal = medicineItems.reduce((s,it)=>s+it.amount,0);
   if(medicineTotal > 0){
     filtered.push({
       id: uid(),
       date: medicineItems[medicineItems.length-1]?.date || '',
-      desc: `ค่าบริการจัดหาเวชภัณฑ์ (service charge ${MEDICINE_SERVICE_CHARGE_RATE*100}% ของยอดเวชภัณฑ์รวม)`,
+      desc: `ค่าเวชภัณฑ์ (service charge ${MEDICINE_SERVICE_CHARGE_RATE*100}% ของยอดเวชภัณฑ์ที่เลือกคิด)`,
       amount: Math.round(medicineTotal * MEDICINE_SERVICE_CHARGE_RATE),
       category: 'medicine_service_charge',
     });
@@ -1423,6 +1430,9 @@ function applyRolePermissions(){
   });
   document.querySelectorAll('[data-hide-for-staff]').forEach(el=>{
     el.style.display = isStaff ? 'none' : '';
+  });
+  document.querySelectorAll('[data-hide-for-accountant]').forEach(el=>{
+    el.style.display = isAccountant ? 'none' : '';
   });
   // staff เห็นได้แค่ "รายชื่อเคส" กับ "ปฏิทิน" — ถ้าล็อกอินมาแล้วอยู่หน้าอื่นที่ถูกซ่อน ให้เด้งไปหน้ารายชื่อเคสแทน
   if(isStaff){
@@ -2012,7 +2022,7 @@ function openCaseDetailView(caseId){
       ${c.dueDateOverride ? `<div>วันครบกำหนดชำระ (กำหนดเอง) &nbsp;<b>${new Date(c.dueDateOverride+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'})}</b></div>` : ''}
       ${c.healthInfo ? `<div>โรคประจำตัว &nbsp;<b>${escapeHtml(c.healthInfo)}</b></div>` : ''}
       ${c.allergy ? `<div>แพ้ยา &nbsp;<b>${escapeHtml(c.allergy)}</b></div>` : ''}
-      <div>ค่าบริการรายเดือน &nbsp;<b>${thb(c.monthlyFee)}</b></div>
+      <div>ค่าบริการรายเดือน &nbsp;<b>${feeDisplay(c.monthlyFee)}</b></div>
       <div>ครบกำหนดชำระทุกวันที่ &nbsp;<b>${c.dueDay}</b></div>
       <div>บัญชีรับเงิน &nbsp;<b>${escapeHtml(c.bankName || '—')} ${c.bankAcc ? '· '+escapeHtml(c.bankAcc):''}</b></div>
       ${c.emergencyContact ? `<div>ผู้ติดต่อฉุกเฉิน &nbsp;<b>${escapeHtml(c.emergencyContact)}${c.emergencyPhone ? ' · '+escapeHtml(c.emergencyPhone) : ''}</b></div>` : ''}
@@ -2020,7 +2030,9 @@ function openCaseDetailView(caseId){
     </div>
   `;
 
-  document.getElementById('case-detail-actions').innerHTML = c.movedOut ? `
+  document.getElementById('case-detail-actions').innerHTML = isAccountantRole() ? `
+    <button class="btn btn-primary" data-detail-entries="${c.id}">บันทึกค่าใช้จ่าย</button>
+  ` : c.movedOut ? `
     <button class="btn btn-sm" data-detail-edit="${c.id}">แก้ไข</button>
     <button class="btn btn-primary" data-detail-restore="${c.id}">กู้คืน</button>
   ` : `
@@ -2167,6 +2179,7 @@ document.getElementById('case-photo-file').addEventListener('change', async (e)=
 });
 
 function openCaseForm(caseId, defaultBranchId){
+  if(isAccountantRole()){ alert('ผู้ลงบัญชีไม่มีสิทธิ์เพิ่ม/แก้ไขข้อมูลเคส'); return; }
   const c = state.cases.find(x=>x.id===caseId);
   document.getElementById('case-modal-title').textContent = c ? 'แก้ไขข้อมูลเคส' : 'เพิ่มเคสใหม่';
   // สร้าง id ล่วงหน้าเสมอ (แม้เคสใหม่) เพื่อให้อัปโหลดรูปได้ก่อนกดบันทึก
@@ -2385,7 +2398,7 @@ function renderEntries(){
             <input type="checkbox" id="fee-included-toggle" ${feeIncluded ? 'checked' : ''} style="width:auto;">
             <span>${monthlyFeePeriodLabel(c, ym)}</span>
           </label>
-          <span class="amt">${feeIncluded ? thb(c.monthlyFee) : 'ไม่รวมเดือนนี้'}</span>
+          <span class="amt">${feeIncluded ? feeDisplay(c.monthlyFee) : 'ไม่รวมเดือนนี้'}</span>
         </div>
         <div class="summary-card">
           <h3>ค่าบริการอื่นๆ ในเดือนนี้</h3>
@@ -2413,12 +2426,16 @@ function renderEntries(){
             <button class="btn btn-primary btn-sm" id="btn-add-entry">+ เพิ่มรายการ</button>
             <button class="btn btn-sm btn-ghost" id="btn-cancel-edit-entry" style="display:none;">ยกเลิก</button>
           </div>
+          <label id="new-entry-service-charge-wrap" style="display:none;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);margin-top:8px;cursor:pointer;">
+            <input type="checkbox" id="new-entry-service-charge" style="width:auto;">
+            คิด Service Charge 10% ของยอดนี้ (บวกเป็นอีกหนึ่งรายการแยกต่างหาก)
+          </label>
           <p id="new-entry-hint" style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;"></p>
         </div>
       </div>
       <div class="summary-card">
         <h3>สรุปยอด — ${escapeHtml(c.name)}</h3>
-        <div class="summary-line"><span>ค่าบริการประจำเดือน${feeIncluded ? '' : ' (ไม่รวมเดือนนี้)'}</span><b>${thb(feeAmount)}</b></div>
+        <div class="summary-line"><span>ค่าบริการประจำเดือน${feeIncluded ? '' : ' (ไม่รวมเดือนนี้)'}</span><b>${feeDisplay(feeAmount)}</b></div>
         <div class="summary-line"><span>ค่าบริการอื่นๆ (${items.length} รายการ)</span><b>${thb(otherTotal)}</b></div>
         <div class="summary-total"><span>ยอดรวมทั้งหมด</span><span>${thb(grandTotal)}</span></div>
         <p style="font-size:12.5px;color:var(--ink-soft);margin:14px 0 0;">ครบกำหนดชำระ ${thaiDateLong(dueDateForMonth(c, ym))}</p>
@@ -2446,8 +2463,11 @@ function renderEntries(){
     const cat = document.getElementById('new-entry-category').value;
     const hint = document.getElementById('new-entry-hint');
     const detailInput = document.getElementById('new-entry-detail');
+    const scWrap = document.getElementById('new-entry-service-charge-wrap');
+    scWrap.style.display = cat === 'medicine' ? 'flex' : 'none';
+    if(cat !== 'medicine') document.getElementById('new-entry-service-charge').checked = false;
     if(cat === 'medicine'){
-      hint.textContent = `กรอกยอดค่าเวชภัณฑ์ — ระบบจะบวก service charge ${MEDICINE_SERVICE_CHARGE_RATE*100}% ให้อัตโนมัติเป็นอีกหนึ่งรายการ`;
+      hint.textContent = `กรอกยอดค่าเวชภัณฑ์ — ติ๊กด้านล่างถ้าต้องการคิด service charge ${MEDICINE_SERVICE_CHARGE_RATE*100}% เพิ่ม`;
       detailInput.placeholder = 'ระบุรายการเวชภัณฑ์ (ไม่บังคับ)';
     } else if(cat === 'procedure'){
       hint.textContent = 'กรุณาระบุรายละเอียดหัตถการที่ให้บริการ';
@@ -2473,6 +2493,7 @@ function renderEntries(){
     document.getElementById('new-entry-detail').value = extractDetailFromDesc(it.category, it.desc);
     document.getElementById('new-entry-amount').value = it.amount;
     updateEntryHint();
+    document.getElementById('new-entry-service-charge').checked = !!it.serviceCharge;
     document.getElementById('btn-add-entry').textContent = 'บันทึกการแก้ไข';
     document.getElementById('btn-cancel-edit-entry').style.display = '';
     document.getElementById('edit-entry-banner').style.display = '';
@@ -2483,6 +2504,7 @@ function renderEntries(){
     document.getElementById('new-entry-category').value = ENTRY_CATEGORIES[0].value;
     document.getElementById('new-entry-detail').value = '';
     document.getElementById('new-entry-amount').value = '';
+    document.getElementById('new-entry-service-charge').checked = false;
     document.getElementById('btn-add-entry').textContent = '+ เพิ่มรายการ';
     document.getElementById('btn-cancel-edit-entry').style.display = 'none';
     document.getElementById('edit-entry-banner').style.display = 'none';
@@ -2498,6 +2520,7 @@ function renderEntries(){
     const category = document.getElementById('new-entry-category').value;
     const detail = document.getElementById('new-entry-detail').value.trim();
     const amount = Number(document.getElementById('new-entry-amount').value);
+    const serviceCharge = category === 'medicine' ? document.getElementById('new-entry-service-charge').checked : false;
     if((category === 'procedure' || category === 'other') && !detail){
       alert('กรุณาระบุรายละเอียดของรายการนี้'); return;
     }
@@ -2511,14 +2534,14 @@ function renderEntries(){
       const idx = state.entries[k].findIndex(it=>it.id===editingEntryId);
       if(idx >= 0){
         const oldCategory = state.entries[k][idx].category;
-        state.entries[k][idx] = { ...state.entries[k][idx], date, desc, amount, category };
+        state.entries[k][idx] = { ...state.entries[k][idx], date, desc, amount, category, serviceCharge };
         if(oldCategory === 'medicine' || category === 'medicine'){
           state.entries[k] = recalcMedicineServiceCharge(state.entries[k]);
         }
       }
       editingEntryId = null;
     } else {
-      state.entries[k].push({ id: uid(), date, desc, amount, category });
+      state.entries[k].push({ id: uid(), date, desc, amount, category, serviceCharge });
       if(category === 'medicine'){
         state.entries[k] = recalcMedicineServiceCharge(state.entries[k]);
       }
@@ -2636,8 +2659,11 @@ function updateAdhocItemHint(){
   const cat = document.getElementById('adhoc-item-category').value;
   const hint = document.getElementById('adhoc-item-hint');
   const detailInput = document.getElementById('adhoc-item-detail');
+  const scWrap = document.getElementById('adhoc-item-service-charge-wrap');
+  scWrap.style.display = cat === 'medicine' ? 'flex' : 'none';
+  if(cat !== 'medicine') document.getElementById('adhoc-item-service-charge').checked = false;
   if(cat === 'medicine'){
-    hint.textContent = `กรอกยอดค่าเวชภัณฑ์ — ระบบจะบวก service charge ${MEDICINE_SERVICE_CHARGE_RATE*100}% ให้อัตโนมัติเป็นอีกหนึ่งรายการ`;
+    hint.textContent = `กรอกยอดค่าเวชภัณฑ์ — ติ๊กด้านล่างถ้าต้องการคิด service charge ${MEDICINE_SERVICE_CHARGE_RATE*100}% เพิ่ม`;
     detailInput.placeholder = 'ระบุรายการเวชภัณฑ์ (ไม่บังคับ)';
   } else if(cat === 'procedure' || cat === 'other'){
     hint.textContent = 'กรุณาระบุรายละเอียด';
@@ -2653,12 +2679,13 @@ document.getElementById('btn-add-adhoc-item').addEventListener('click', ()=>{
   const category = document.getElementById('adhoc-item-category').value;
   const detail = document.getElementById('adhoc-item-detail').value.trim();
   const amount = Number(document.getElementById('adhoc-item-amount').value);
+  const serviceCharge = category === 'medicine' ? document.getElementById('adhoc-item-service-charge').checked : false;
   if((category === 'procedure' || category === 'other') && !detail){ alert('กรุณาระบุรายละเอียดของรายการนี้'); return; }
   if(!amount){ alert('กรุณากรอกจำนวนเงิน'); return; }
 
   const baseLabel = category === 'monthly' ? 'ค่าบริการประจำเดือน' : entryCategoryLabel(category);
   const desc = category === 'other' ? detail : (detail ? `${baseLabel} — ${detail}` : baseLabel);
-  adhocFormItems.push({ id: uid(), desc, amount, category });
+  adhocFormItems.push({ id: uid(), desc, amount, category, serviceCharge });
 
   if(category === 'medicine'){
     adhocFormItems = recalcMedicineServiceCharge(adhocFormItems);
@@ -2666,6 +2693,7 @@ document.getElementById('btn-add-adhoc-item').addEventListener('click', ()=>{
 
   document.getElementById('adhoc-item-detail').value = '';
   document.getElementById('adhoc-item-amount').value = '';
+  document.getElementById('adhoc-item-service-charge').checked = false;
   renderAdhocItemsList();
 });
 
@@ -3009,7 +3037,7 @@ function renderSummary(){
           <div><div style="font-weight:500;">${escapeHtml(c.name)}</div><div style="font-size:11.5px;color:var(--ink-soft);">${dueLabel}</div></div>
         </div>
       </td>
-      <td class="num">${kind==='monthly' ? thb(c.monthlyFee) : '—'}</td>
+      <td class="num">${kind==='monthly' ? feeDisplay(c.monthlyFee) : '—'}</td>
       <td class="num">${thb(other)}</td>
       <td class="num" style="font-weight:600;">${thb(total)}</td>
       <td>${tag}</td>
@@ -3359,11 +3387,12 @@ function computeMonthRevenue(cases, ym){
 
 // แยกยอดรายรับตามหมวดค่าใช้จ่าย — รวมทั้งค่าบริการรายเดือน (จากตัวเคส) และรายการย่อยในบันทึกค่าใช้จ่าย/บิลพิเศษ (แยกตาม category)
 function computeCategoryBreakdown(cases, ym){
-  const buckets = { monthly:0, medicine:0, escort:0, physio:0, other:0 };
+  const buckets = { monthly:0, medicine:0, escort:0, physio:0, therapy:0, other:0 };
   const bucketOf = category => {
     if(category === 'medicine' || category === 'medicine_service_charge') return 'medicine';
     if(category === 'escort') return 'escort';
     if(category === 'physio') return 'physio';
+    if(category === 'therapy') return 'therapy';
     return 'other';
   };
   const caseIds = new Set(cases.map(c=>c.id));
@@ -3451,6 +3480,7 @@ function renderOverview(){
     { label:'ค่าเวชภัณฑ์',       color:'var(--gold)',       amt: cat.medicine },
     { label:'ค่าบริการพาหาหมอ',  color:'#2E6B9E',           amt: cat.escort },
     { label:'ค่ากายภาพบำบัด',    color:'#7A5C8A',           amt: cat.physio },
+    { label:'ค่ากิจกรรมบำบัด (ฝึกกลืน)', color:'#B0555A',   amt: cat.therapy },
     { label:'ค่าบริการอื่นๆ',     color:'var(--ink-faint)',  amt: cat.other },
   ];
   const catTotal = catList.reduce((s,x)=>s+x.amt,0);
