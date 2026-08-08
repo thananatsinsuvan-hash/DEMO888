@@ -2393,13 +2393,14 @@ function renderEntries(){
   body.innerHTML = `
     <div class="entry-panel">
       <div>
+        ${isAccountantRole() ? '' : `
         <div class="fee-line">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;">
             <input type="checkbox" id="fee-included-toggle" ${feeIncluded ? 'checked' : ''} style="width:auto;">
             <span>${monthlyFeePeriodLabel(c, ym)}</span>
           </label>
           <span class="amt">${feeIncluded ? feeDisplay(c.monthlyFee) : 'ไม่รวมเดือนนี้'}</span>
-        </div>
+        </div>`}
         <div class="summary-card">
           <h3>ค่าบริการอื่นๆ ในเดือนนี้</h3>
           <div id="entry-list">
@@ -2435,9 +2436,9 @@ function renderEntries(){
       </div>
       <div class="summary-card">
         <h3>สรุปยอด — ${escapeHtml(c.name)}</h3>
-        <div class="summary-line"><span>ค่าบริการประจำเดือน${feeIncluded ? '' : ' (ไม่รวมเดือนนี้)'}</span><b>${feeDisplay(feeAmount)}</b></div>
+        ${isAccountantRole() ? '' : `<div class="summary-line"><span>ค่าบริการประจำเดือน${feeIncluded ? '' : ' (ไม่รวมเดือนนี้)'}</span><b>${feeDisplay(feeAmount)}</b></div>`}
         <div class="summary-line"><span>ค่าบริการอื่นๆ (${items.length} รายการ)</span><b>${thb(otherTotal)}</b></div>
-        <div class="summary-total"><span>ยอดรวมทั้งหมด</span><span>${thb(grandTotal)}</span></div>
+        ${isAccountantRole() ? '' : `<div class="summary-total"><span>ยอดรวมทั้งหมด</span><span>${thb(grandTotal)}</span></div>`}
         <p style="font-size:12.5px;color:var(--ink-soft);margin:14px 0 0;">ครบกำหนดชำระ ${thaiDateLong(dueDateForMonth(c, ym))}</p>
       </div>
     </div>
@@ -2453,7 +2454,7 @@ function renderEntries(){
   document.getElementById('btn-add-adhoc-bill').addEventListener('click', ()=> openAdhocBillForm(c.id, null));
   renderAdhocBillList(c.id);
 
-  document.getElementById('fee-included-toggle').addEventListener('change', async (e)=>{
+  document.getElementById('fee-included-toggle')?.addEventListener('change', async (e)=>{
     state.feeToggles[k] = e.target.checked;
     await saveState();
     renderEntries();
