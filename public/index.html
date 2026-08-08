@@ -506,7 +506,16 @@
         </div>
         <div class="field" style="margin-bottom:0;min-width:220px;flex:1;">
           <label>ค้นหา</label>
-          <input type="text" id="case-search" placeholder="🔍 ค้นหาชื่อเคส หรือรหัสสาขา...">
+          <input type="text" id="case-search" placeholder="🔍 ค้นหาชื่อเคส, เลขเตียง หรือรหัสสาขา...">
+        </div>
+        <div class="field" style="margin-bottom:0;min-width:170px;">
+          <label>เรียงตาม</label>
+          <select id="case-sort">
+            <option value="name">ชื่อเคส (ก-ฮ)</option>
+            <option value="bed">เลขที่เตียง</option>
+            <option value="admission">วันที่เข้ารับบริการ</option>
+            <option value="due">วันครบกำหนดชำระ</option>
+          </select>
         </div>
       </div>
       <div id="cases-count" style="font-size:12.5px;color:var(--ink-soft);margin:2px 0 10px;"></div>
@@ -700,6 +709,10 @@
         <label>อายุ (ปี)</label>
         <input id="case-age" type="number" min="0" max="130" placeholder="เช่น 78">
       </div>
+    </div>
+    <div class="field">
+      <label>เลขที่เตียง</label>
+      <input id="case-bed-number" placeholder="เช่น 12 หรือ 12A">
     </div>
     <div class="field">
       <label>หมายเหตุ (ผู้ดูแล / ที่อยู่ / ญาติผู้ติดต่อ)</label>
@@ -1900,6 +1913,7 @@ document.getElementById('case-org-filter').addEventListener('change', ()=>{
 });
 document.getElementById('case-branch-filter').addEventListener('change', renderCases);
 document.getElementById('case-search').addEventListener('input', renderCases);
+document.getElementById('case-sort').addEventListener('change', renderCases);
 
 function renderCases(){
   updateArchiveToggleUI();
@@ -1919,10 +1933,30 @@ function renderCases(){
     filtered = filtered.filter(c=>{
       const branch = c.branchId ? state.branches.find(b=>b.id===c.branchId) : null;
       const code = branch ? (branch.code || '') : '';
-      return c.name.toLowerCase().includes(q) || code.toLowerCase().includes(q);
+      return c.name.toLowerCase().includes(q) || code.toLowerCase().includes(q) || (c.bedNumber||'').toLowerCase().includes(q);
     });
   }
   countBox.textContent = q ? `พบ ${filtered.length} จาก ${total} เคส` : `ทั้งหมด ${total} เคส`;
+
+  const sortBy = document.getElementById('case-sort').value;
+  filtered = filtered.slice().sort((a,b)=>{
+    if(sortBy === 'bed'){
+      if(!a.bedNumber && !b.bedNumber) return a.name.localeCompare(b.name, 'th');
+      if(!a.bedNumber) return 1;
+      if(!b.bedNumber) return -1;
+      return naturalCompare(a.bedNumber, b.bedNumber);
+    }
+    if(sortBy === 'admission'){
+      if(!a.admissionDate && !b.admissionDate) return a.name.localeCompare(b.name, 'th');
+      if(!a.admissionDate) return 1;
+      if(!b.admissionDate) return -1;
+      return a.admissionDate.localeCompare(b.admissionDate);
+    }
+    if(sortBy === 'due'){
+      return (a.dueDay || 99) - (b.dueDay || 99) || a.name.localeCompare(b.name, 'th');
+    }
+    return a.name.localeCompare(b.name, 'th');
+  });
 
   if(filtered.length === 0){
     container.innerHTML = `<div class="empty"><div class="big">${q ? 'ไม่พบเคสที่ค้นหา' : 'ไม่มีเคสในสาขาที่เลือก'}</div>${q ? 'ลองค้นหาด้วยคำอื่น' : 'ลองเลือกองค์กร/สาขาอื่น หรือกด "+ เพิ่มเคสใหม่" เพื่อเพิ่มเคสให้สาขานี้'}</div>`;
@@ -1938,6 +1972,7 @@ function renderCases(){
         : `<div class="avatar" style="background:${colorFor(c.id)}">${initials(c.name).toUpperCase()}</div>`}
       <span class="case-list-name">${escapeHtml(c.name)}</span>
       ${c.movedOut ? `<span class="branch-code-tag" style="background:var(--rust-tint);color:var(--rust);">ย้ายออกแล้ว</span>` : ''}
+      ${c.bedNumber ? `<span class="branch-code-tag" style="background:var(--pine-tint);color:var(--pine-dark);">เตียง ${escapeHtml(c.bedNumber)}</span>` : ''}
       ${branch && branch.code ? `<span class="branch-code-tag">${escapeHtml(branch.code)}</span>` : ''}
       <span class="chevron">›</span>
     </div>`;
@@ -1966,6 +2001,7 @@ function openCaseDetailView(caseId){
     </div>
     <div class="case-meta">
       ${branch ? `<div>สาขา &nbsp;<b>${escapeHtml(branch.name)}</b>${branch.code ? ' <span class="branch-code-tag">'+escapeHtml(branch.code)+'</span>' : ''}${orgOfBranch(c.branchId) ? ' <span style="color:var(--ink-faint);">('+escapeHtml(orgOfBranch(c.branchId))+')</span>' : ''}</div>` : ''}
+      ${c.bedNumber ? `<div>เลขที่เตียง &nbsp;<b>${escapeHtml(c.bedNumber)}</b></div>` : ''}
       ${c.admissionDate ? `<div>วันที่เข้ารับบริการ &nbsp;<b>${new Date(c.admissionDate+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'})}</b></div>` : ''}
       ${c.dueDateOverride ? `<div>วันครบกำหนดชำระ (กำหนดเอง) &nbsp;<b>${new Date(c.dueDateOverride+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'})}</b></div>` : ''}
       ${c.healthInfo ? `<div>โรคประจำตัว &nbsp;<b>${escapeHtml(c.healthInfo)}</b></div>` : ''}
@@ -2033,6 +2069,26 @@ async function restoreCase(caseId){
   renderDueBanner();
 }
 
+// เรียงเลขที่เตียงแบบธรรมชาติ (natural sort) — "2" มาก่อน "10" ไม่ใช่เรียงแบบ string ตรงๆ ที่จะได้ "10" ก่อน "2"
+function naturalCompare(a, b){
+  const ax = String(a||'').match(/\d+|\D+/g) || [];
+  const bx = String(b||'').match(/\d+|\D+/g) || [];
+  const len = Math.max(ax.length, bx.length);
+  for(let i=0;i<len;i++){
+    const av = ax[i], bv = bx[i];
+    if(av === undefined) return -1;
+    if(bv === undefined) return 1;
+    const an = /^\d+$/.test(av), bn = /^\d+$/.test(bv);
+    if(an && bn){
+      const diff = Number(av) - Number(bv);
+      if(diff !== 0) return diff;
+    } else {
+      const cmp = av.localeCompare(bv, 'th');
+      if(cmp !== 0) return cmp;
+    }
+  }
+  return 0;
+}
 function escapeHtml(s){
   return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
@@ -2112,6 +2168,7 @@ function openCaseForm(caseId, defaultBranchId){
   document.getElementById('case-name').value = c ? c.name : '';
   populateCaseBranchSelect(c ? c.branchId : (defaultBranchId || ''));
   document.getElementById('case-age').value = c ? (c.age ?? '') : '';
+  document.getElementById('case-bed-number').value = c ? (c.bedNumber || '') : '';
   document.getElementById('case-note').value = c ? (c.note||'') : '';
   document.getElementById('case-health-info').value = c ? (c.healthInfo||'') : '';
   document.getElementById('case-allergy').value = c ? (c.allergy||'') : '';
@@ -2145,6 +2202,7 @@ document.getElementById('btn-save-case').addEventListener('click', async ()=>{
     name,
     branchId: document.getElementById('case-branch').value,
     age: Number(document.getElementById('case-age').value) || null,
+    bedNumber: document.getElementById('case-bed-number').value.trim(),
     note: document.getElementById('case-note').value.trim(),
     healthInfo: document.getElementById('case-health-info').value.trim(),
     allergy: document.getElementById('case-allergy').value.trim(),

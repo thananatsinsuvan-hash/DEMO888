@@ -604,6 +604,7 @@ const mapCase = (c) => ({
   emergencyContact: c.emergency_contact || "",
   emergencyPhone: c.emergency_phone || "",
   admissionDate: c.admission_date || "",
+  bedNumber: c.bed_number || "",
   dueDateOverride: c.due_date_override || "",
   withholdingOverride: c.withholding_override || "",
   address: c.address || "",
@@ -711,13 +712,13 @@ async function saveState(db, state) {
     stmts.push(
       db
         .prepare(
-          `INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner,bank_account_id,age,health_info,allergy,emergency_contact,emergency_phone,admission_date,due_date_override,withholding_override,address,phone,tax_id,photo_key,moved_out,move_out_date)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+          `INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner,bank_account_id,age,health_info,allergy,emergency_contact,emergency_phone,admission_date,due_date_override,withholding_override,address,phone,tax_id,bed_number,photo_key,moved_out,move_out_date)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
         )
         .bind(
           c.id, c.branchId || null, c.name, c.note || "", c.monthlyFee || 0, c.dueDay || 1, c.bankName || "", c.bankAcc || "", c.bankOwner || "", c.bankAccountId || null,
           c.age ?? null, c.healthInfo || "", c.allergy || "", c.emergencyContact || "", c.emergencyPhone || "", c.admissionDate || "", c.dueDateOverride || "",
-          c.withholdingOverride || "", c.address || "", c.phone || "", c.taxId || "", c.photoKey || "",
+          c.withholdingOverride || "", c.address || "", c.phone || "", c.taxId || "", c.bedNumber || "", c.photoKey || "",
           c.movedOut ? 1 : 0, c.moveOutDate || null
         )
     );
@@ -858,8 +859,8 @@ async function saveScopedState(db, state, branchIds) {
   for (const c of scopedCases) {
     stmts.push(
       db.prepare(`
-        INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner,bank_account_id,age,health_info,allergy,emergency_contact,emergency_phone,admission_date,due_date_override,withholding_override,address,phone,tax_id,photo_key,moved_out,move_out_date)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        INSERT INTO cases (id,branch_id,name,note,monthly_fee,due_day,bank_name,bank_acc,bank_owner,bank_account_id,age,health_info,allergy,emergency_contact,emergency_phone,admission_date,due_date_override,withholding_override,address,phone,tax_id,bed_number,photo_key,moved_out,move_out_date)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET
           branch_id=excluded.branch_id, name=excluded.name, note=excluded.note,
           monthly_fee=excluded.monthly_fee, due_day=excluded.due_day,
@@ -867,12 +868,12 @@ async function saveScopedState(db, state, branchIds) {
           age=excluded.age, health_info=excluded.health_info, allergy=excluded.allergy,
           emergency_contact=excluded.emergency_contact, emergency_phone=excluded.emergency_phone,
           admission_date=excluded.admission_date, due_date_override=excluded.due_date_override,
-          withholding_override=excluded.withholding_override, address=excluded.address, phone=excluded.phone, tax_id=excluded.tax_id, photo_key=excluded.photo_key,
+          withholding_override=excluded.withholding_override, address=excluded.address, phone=excluded.phone, tax_id=excluded.tax_id, bed_number=excluded.bed_number, photo_key=excluded.photo_key,
           moved_out=excluded.moved_out, move_out_date=excluded.move_out_date
       `).bind(
         c.id, c.branchId, c.name, c.note || "", c.monthlyFee || 0, c.dueDay || 1, c.bankName || "", c.bankAcc || "", c.bankOwner || "", c.bankAccountId || null,
         c.age ?? null, c.healthInfo || "", c.allergy || "", c.emergencyContact || "", c.emergencyPhone || "", c.admissionDate || "", c.dueDateOverride || "",
-        c.withholdingOverride || "", c.address || "", c.phone || "", c.taxId || "", c.photoKey || "",
+        c.withholdingOverride || "", c.address || "", c.phone || "", c.taxId || "", c.bedNumber || "", c.photoKey || "",
         c.movedOut ? 1 : 0, c.moveOutDate || null
       )
     );
