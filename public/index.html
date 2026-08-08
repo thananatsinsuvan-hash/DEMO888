@@ -152,7 +152,8 @@
   .case-list-row:last-child{border-bottom:none;}
   .case-list-row:hover{background:var(--pine-tint);}
   .case-list-row .avatar{width:36px;height:36px;font-size:13px;}
-  .case-list-name{font-size:14.5px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .case-list-name{font-size:14.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .case-list-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .branch-code-tag{font-size:11px;color:var(--ink-soft);background:var(--line);padding:2px 9px;border-radius:12px;font-weight:600;letter-spacing:.02em;flex-shrink:0;}
   .case-list-row .chevron{color:var(--ink-faint);font-size:16px;flex-shrink:0;}
   .case-list-row.movedout{opacity:.7;}
@@ -1965,14 +1966,19 @@ function renderCases(){
 
   container.innerHTML = `<div class="case-list">${filtered.map(c=>{
     const branch = c.branchId ? state.branches.find(b=>b.id===c.branchId) : null;
+    const subParts = [];
+    if(c.bedNumber) subParts.push(`เตียง ${escapeHtml(c.bedNumber)}`);
+    if(c.dueDay) subParts.push(`ครบกำหนดวันที่ ${c.dueDay}`);
     return `
     <div class="case-list-row${c.movedOut ? ' movedout' : ''}" data-view-case="${c.id}">
       ${c.photoKey
         ? `<img class="avatar" style="object-fit:cover;" src="/api/photo/${encodeURIComponent(c.photoKey)}">`
         : `<div class="avatar" style="background:${colorFor(c.id)}">${initials(c.name).toUpperCase()}</div>`}
-      <span class="case-list-name">${escapeHtml(c.name)}</span>
+      <div style="flex:1;min-width:0;">
+        <div class="case-list-name">${escapeHtml(c.name)}</div>
+        ${subParts.length ? `<div class="case-list-sub">${subParts.join(' · ')}</div>` : ''}
+      </div>
       ${c.movedOut ? `<span class="branch-code-tag" style="background:var(--rust-tint);color:var(--rust);">ย้ายออกแล้ว</span>` : ''}
-      ${c.bedNumber ? `<span class="branch-code-tag" style="background:var(--pine-tint);color:var(--pine-dark);">เตียง ${escapeHtml(c.bedNumber)}</span>` : ''}
       ${branch && branch.code ? `<span class="branch-code-tag">${escapeHtml(branch.code)}</span>` : ''}
       <span class="chevron">›</span>
     </div>`;
