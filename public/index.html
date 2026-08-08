@@ -145,6 +145,17 @@
   .case-meta{font-size:13px;color:var(--ink-soft);display:flex;flex-direction:column;gap:5px;border-top:0.5px solid var(--line);padding-top:11px;margin-bottom:12px;}
   .case-meta b{color:var(--ink);font-weight:500;}
   .case-actions{display:flex;gap:8px;}
+
+  /* Compact case list rows */
+  .case-list{background:var(--card);border:0.5px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;}
+  .case-list-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:0.5px solid var(--line);cursor:pointer;}
+  .case-list-row:last-child{border-bottom:none;}
+  .case-list-row:hover{background:var(--pine-tint);}
+  .case-list-row .avatar{width:36px;height:36px;font-size:13px;}
+  .case-list-name{font-size:14.5px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .branch-code-tag{font-size:11px;color:var(--ink-soft);background:var(--line);padding:2px 9px;border-radius:12px;font-weight:600;letter-spacing:.02em;flex-shrink:0;}
+  .case-list-row .chevron{color:var(--ink-faint);font-size:16px;flex-shrink:0;}
+  .case-list-row.movedout{opacity:.7;}
   .empty{
     text-align:center;padding:56px 20px;color:var(--ink-soft);
     border:1px dashed var(--line-strong);border-radius:12px;font-size:14px;
@@ -242,7 +253,12 @@
   .ov-bar-mini-fill{height:100%;background:var(--pine);border-radius:3px;}
   .ov-donut{width:100px;height:100px;border-radius:50%;flex-shrink:0;position:relative;}
   .ov-donut::after{content:'';position:absolute;inset:16px;border-radius:50%;background:var(--card);}
-  .ov-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;}
+  .ov-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;flex-shrink:0;}
+  .ov-cat-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--line);margin-bottom:12px;}
+  .ov-cat-row{display:flex;align-items:center;gap:0;padding:6px 0;font-size:13px;}
+  .ov-cat-label{flex:1;min-width:0;}
+  .ov-cat-pct{font-size:11.5px;color:var(--ink-faint);width:34px;text-align:right;flex-shrink:0;}
+  .ov-cat-amt{font-size:13px;font-weight:600;margin-left:12px;font-variant-numeric:tabular-nums;flex-shrink:0;}
   @media (max-width:820px){
     .ov-kpi-grid{grid-template-columns:1fr 1fr;}
     .ov-split-row{grid-template-columns:1fr;}
@@ -488,7 +504,12 @@
           <label>2. สาขา</label>
           <select id="case-branch-filter"></select>
         </div>
+        <div class="field" style="margin-bottom:0;min-width:220px;flex:1;">
+          <label>ค้นหา</label>
+          <input type="text" id="case-search" placeholder="🔍 ค้นหาชื่อเคส หรือรหัสสาขา...">
+        </div>
       </div>
+      <div id="cases-count" style="font-size:12.5px;color:var(--ink-soft);margin:2px 0 10px;"></div>
       <div id="cases-container"></div>
     </section>
 
@@ -1067,6 +1088,18 @@
   </div>
 </div>
 
+<!-- CASE DETAIL VIEW MODAL (ดูอย่างเดียว กดปุ่มด้านล่างเพื่อไปแก้ไข/จัดการบิล) -->
+<div class="overlay" id="overlay-case-detail">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="case-detail-title">รายละเอียดเคส</h3>
+      <button class="modal-close" data-close="overlay-case-detail">&times;</button>
+    </div>
+    <div id="case-detail-body"></div>
+    <div class="modal-foot" id="case-detail-actions"></div>
+  </div>
+</div>
+
 <!-- SLIP VIEW MODAL (ดูรูปสลิปอย่างเดียว ไม่เกี่ยวกับใบเสร็จ) -->
 <div class="overlay" id="overlay-slip-view">
   <div class="modal">
@@ -1275,6 +1308,7 @@ const ENTRY_CATEGORIES = [
   { value: 'deposit',   label: 'ค่ามัดจำการให้บริการ' },
   { value: 'procedure', label: 'ค่าบริการหัตถการทางการพยาบาล (ระบุเพิ่ม)' },
   { value: 'escort',    label: 'ค่าบริการเจ้าหน้าที่พาไปพบแพทย์' },
+  { value: 'physio',    label: 'ค่ากายภาพบำบัด' },
   { value: 'medicine',  label: 'ค่าบริการจัดหาเวชภัณฑ์ (บวก service charge 10% อัตโนมัติ)' },
   { value: 'other',     label: 'อื่นๆ (ระบุ)' },
 ];
@@ -1865,71 +1899,113 @@ document.getElementById('case-org-filter').addEventListener('change', ()=>{
   renderCases();
 });
 document.getElementById('case-branch-filter').addEventListener('change', renderCases);
+document.getElementById('case-search').addEventListener('input', renderCases);
 
 function renderCases(){
   updateArchiveToggleUI();
   populateCaseOrgFilter();
   populateCaseBranchFilter();
   const container = document.getElementById('cases-container');
+  const countBox = document.getElementById('cases-count');
   if(state.cases.length === 0){
     container.innerHTML = `<div class="empty"><div class="big">ยังไม่มีเคส</div>เพิ่มเคสแรกเพื่อเริ่มบันทึกค่าใช้จ่าย</div>`;
+    countBox.textContent = '';
     return;
   }
-  const filtered = casesForFilter();
+  let filtered = casesForFilter();
+  const total = filtered.length;
+  const q = (document.getElementById('case-search').value || '').trim().toLowerCase();
+  if(q){
+    filtered = filtered.filter(c=>{
+      const branch = c.branchId ? state.branches.find(b=>b.id===c.branchId) : null;
+      const code = branch ? (branch.code || '') : '';
+      return c.name.toLowerCase().includes(q) || code.toLowerCase().includes(q);
+    });
+  }
+  countBox.textContent = q ? `พบ ${filtered.length} จาก ${total} เคส` : `ทั้งหมด ${total} เคส`;
+
   if(filtered.length === 0){
-    container.innerHTML = `<div class="empty"><div class="big">ไม่มีเคสในสาขาที่เลือก</div>ลองเลือกองค์กร/สาขาอื่น หรือกด "+ เพิ่มเคสใหม่" เพื่อเพิ่มเคสให้สาขานี้</div>`;
+    container.innerHTML = `<div class="empty"><div class="big">${q ? 'ไม่พบเคสที่ค้นหา' : 'ไม่มีเคสในสาขาที่เลือก'}</div>${q ? 'ลองค้นหาด้วยคำอื่น' : 'ลองเลือกองค์กร/สาขาอื่น หรือกด "+ เพิ่มเคสใหม่" เพื่อเพิ่มเคสให้สาขานี้'}</div>`;
     return;
   }
-  container.innerHTML = `<div class="grid">${filtered.map(c=>`
-    <div class="case-card">
-      <div class="case-top">
-        ${c.photoKey
-          ? `<img class="avatar" style="object-fit:cover;" src="/api/photo/${encodeURIComponent(c.photoKey)}">`
-          : `<div class="avatar" style="background:${colorFor(c.id)}">${initials(c.name).toUpperCase()}</div>`}
-        <div>
-          <p class="case-name">${escapeHtml(c.name)}${c.age ? ` <span style="font-weight:400;color:var(--ink-soft);font-size:12.5px;">(อายุ ${c.age} ปี)</span>` : ''}</p>
-          <p class="case-note">${escapeHtml(c.note || '—')}</p>
-        </div>
-      </div>
-      <div class="case-meta">
-        ${c.branchId ? `<div>สาขา &nbsp;<b>${escapeHtml(branchName(c.branchId))}</b>${orgOfBranch(c.branchId) ? ' <span style="color:var(--ink-faint);">('+escapeHtml(orgOfBranch(c.branchId))+')</span>' : ''}</div>` : ''}
-        ${c.admissionDate ? `<div>วันที่เข้ารับบริการ &nbsp;<b>${new Date(c.admissionDate+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'})}</b></div>` : ''}
-        ${c.dueDateOverride ? `<div>วันครบกำหนดชำระ (กำหนดเอง) &nbsp;<b>${new Date(c.dueDateOverride+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'})}</b></div>` : ''}
-        ${c.healthInfo ? `<div>โรคประจำตัว &nbsp;<b>${escapeHtml(c.healthInfo)}</b></div>` : ''}
-        ${c.allergy ? `<div>แพ้ยา &nbsp;<b>${escapeHtml(c.allergy)}</b></div>` : ''}
-        <div>ค่าบริการรายเดือน &nbsp;<b>${thb(c.monthlyFee)}</b></div>
-        <div>ครบกำหนดชำระทุกวันที่ &nbsp;<b>${c.dueDay}</b></div>
-        <div>บัญชีรับเงิน &nbsp;<b>${escapeHtml(c.bankName || '—')} ${c.bankAcc ? '· '+escapeHtml(c.bankAcc):''}</b></div>
-        ${c.movedOut ? `<div style="color:#B3261E;">ย้ายออกวันที่ &nbsp;<b>${c.moveOutDate ? new Date(c.moveOutDate+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—'}</b></div>` : ''}
-      </div>
-      <div class="case-actions">
-        ${c.movedOut ? `
-          <button class="btn btn-sm" data-edit-case="${c.id}">แก้ไข</button>
-          <button class="btn btn-sm btn-primary" data-restore-case="${c.id}">กู้คืน</button>
-        ` : `
-          <button class="btn btn-sm" data-edit-case="${c.id}">แก้ไข</button>
-          <button class="btn btn-sm btn-ghost" data-goto-entries="${c.id}">บันทึกค่าใช้จ่าย</button>
-          <button class="btn btn-sm btn-danger" data-moveout-case="${c.id}">ย้ายออก</button>
-        `}
+
+  container.innerHTML = `<div class="case-list">${filtered.map(c=>{
+    const branch = c.branchId ? state.branches.find(b=>b.id===c.branchId) : null;
+    return `
+    <div class="case-list-row${c.movedOut ? ' movedout' : ''}" data-view-case="${c.id}">
+      ${c.photoKey
+        ? `<img class="avatar" style="object-fit:cover;" src="/api/photo/${encodeURIComponent(c.photoKey)}">`
+        : `<div class="avatar" style="background:${colorFor(c.id)}">${initials(c.name).toUpperCase()}</div>`}
+      <span class="case-list-name">${escapeHtml(c.name)}</span>
+      ${c.movedOut ? `<span class="branch-code-tag" style="background:var(--rust-tint);color:var(--rust);">ย้ายออกแล้ว</span>` : ''}
+      ${branch && branch.code ? `<span class="branch-code-tag">${escapeHtml(branch.code)}</span>` : ''}
+      <span class="chevron">›</span>
+    </div>`;
+  }).join('')}</div>`;
+
+  container.querySelectorAll('[data-view-case]').forEach(row=>{
+    row.addEventListener('click', ()=> openCaseDetailView(row.dataset.viewCase));
+  });
+}
+
+function openCaseDetailView(caseId){
+  const c = state.cases.find(x=>x.id===caseId);
+  if(!c) return;
+  const branch = c.branchId ? state.branches.find(b=>b.id===c.branchId) : null;
+
+  document.getElementById('case-detail-title').textContent = c.name;
+  document.getElementById('case-detail-body').innerHTML = `
+    <div class="case-top" style="margin-bottom:16px;">
+      ${c.photoKey
+        ? `<img class="avatar" style="width:52px;height:52px;object-fit:cover;" src="/api/photo/${encodeURIComponent(c.photoKey)}">`
+        : `<div class="avatar" style="width:52px;height:52px;font-size:17px;background:${colorFor(c.id)}">${initials(c.name).toUpperCase()}</div>`}
+      <div>
+        <p class="case-name">${escapeHtml(c.name)}${c.age ? ` <span style="font-weight:400;color:var(--ink-soft);font-size:12.5px;">(อายุ ${c.age} ปี)</span>` : ''}</p>
+        <p class="case-note">${escapeHtml(c.note || '—')}</p>
       </div>
     </div>
-  `).join('')}</div>`;
+    <div class="case-meta">
+      ${branch ? `<div>สาขา &nbsp;<b>${escapeHtml(branch.name)}</b>${branch.code ? ' <span class="branch-code-tag">'+escapeHtml(branch.code)+'</span>' : ''}${orgOfBranch(c.branchId) ? ' <span style="color:var(--ink-faint);">('+escapeHtml(orgOfBranch(c.branchId))+')</span>' : ''}</div>` : ''}
+      ${c.admissionDate ? `<div>วันที่เข้ารับบริการ &nbsp;<b>${new Date(c.admissionDate+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'})}</b></div>` : ''}
+      ${c.dueDateOverride ? `<div>วันครบกำหนดชำระ (กำหนดเอง) &nbsp;<b>${new Date(c.dueDateOverride+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'})}</b></div>` : ''}
+      ${c.healthInfo ? `<div>โรคประจำตัว &nbsp;<b>${escapeHtml(c.healthInfo)}</b></div>` : ''}
+      ${c.allergy ? `<div>แพ้ยา &nbsp;<b>${escapeHtml(c.allergy)}</b></div>` : ''}
+      <div>ค่าบริการรายเดือน &nbsp;<b>${thb(c.monthlyFee)}</b></div>
+      <div>ครบกำหนดชำระทุกวันที่ &nbsp;<b>${c.dueDay}</b></div>
+      <div>บัญชีรับเงิน &nbsp;<b>${escapeHtml(c.bankName || '—')} ${c.bankAcc ? '· '+escapeHtml(c.bankAcc):''}</b></div>
+      ${c.emergencyContact ? `<div>ผู้ติดต่อฉุกเฉิน &nbsp;<b>${escapeHtml(c.emergencyContact)}${c.emergencyPhone ? ' · '+escapeHtml(c.emergencyPhone) : ''}</b></div>` : ''}
+      ${c.movedOut ? `<div style="color:#B3261E;">ย้ายออกวันที่ &nbsp;<b>${c.moveOutDate ? new Date(c.moveOutDate+'T00:00:00').toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—'}</b></div>` : ''}
+    </div>
+  `;
 
-  container.querySelectorAll('[data-edit-case]').forEach(b=>{
-    b.addEventListener('click', ()=> openCaseForm(b.dataset.editCase));
+  document.getElementById('case-detail-actions').innerHTML = c.movedOut ? `
+    <button class="btn btn-sm" data-detail-edit="${c.id}">แก้ไข</button>
+    <button class="btn btn-primary" data-detail-restore="${c.id}">กู้คืน</button>
+  ` : `
+    <button class="btn btn-sm btn-danger" data-detail-moveout="${c.id}" style="margin-right:auto;">ย้ายออก</button>
+    <button class="btn btn-sm" data-detail-entries="${c.id}">บันทึกค่าใช้จ่าย</button>
+    <button class="btn btn-primary" data-detail-edit="${c.id}">แก้ไข</button>
+  `;
+
+  const actionsBox = document.getElementById('case-detail-actions');
+  actionsBox.querySelectorAll('[data-detail-edit]').forEach(b=>{
+    b.addEventListener('click', ()=>{ closeOverlay('overlay-case-detail'); openCaseForm(b.dataset.detailEdit); });
   });
-  container.querySelectorAll('[data-goto-entries]').forEach(b=>{
+  actionsBox.querySelectorAll('[data-detail-entries]').forEach(b=>{
     b.addEventListener('click', ()=>{
+      closeOverlay('overlay-case-detail');
       document.querySelector('.nav-btn[data-view="entries"]').click();
-      selectEntryForCase(b.dataset.gotoEntries);
+      selectEntryForCase(b.dataset.detailEntries);
     });
   });
-  container.querySelectorAll('[data-moveout-case]').forEach(b=>{
-    b.addEventListener('click', ()=> moveOutCase(b.dataset.moveoutCase));
+  actionsBox.querySelectorAll('[data-detail-moveout]').forEach(b=>{
+    b.addEventListener('click', ()=>{ closeOverlay('overlay-case-detail'); moveOutCase(b.dataset.detailMoveout); });
   });
-  container.querySelectorAll('[data-restore-case]').forEach(b=>{
-    b.addEventListener('click', ()=> restoreCase(b.dataset.restoreCase));
+  actionsBox.querySelectorAll('[data-detail-restore]').forEach(b=>{
+    b.addEventListener('click', ()=>{ closeOverlay('overlay-case-detail'); restoreCase(b.dataset.detailRestore); });
   });
+
+  openOverlay('overlay-case-detail');
 }
 
 async function moveOutCase(caseId){
@@ -3217,6 +3293,32 @@ function computeMonthRevenue(cases, ym){
   return { total, paid, outstanding: total - paid, monthlyTotal, adhocTotal };
 }
 
+// แยกยอดรายรับตามหมวดค่าใช้จ่าย — รวมทั้งค่าบริการรายเดือน (จากตัวเคส) และรายการย่อยในบันทึกค่าใช้จ่าย/บิลพิเศษ (แยกตาม category)
+function computeCategoryBreakdown(cases, ym){
+  const buckets = { monthly:0, medicine:0, escort:0, physio:0, other:0 };
+  const bucketOf = category => {
+    if(category === 'medicine' || category === 'medicine_service_charge') return 'medicine';
+    if(category === 'escort') return 'escort';
+    if(category === 'physio') return 'physio';
+    return 'other';
+  };
+  const caseIds = new Set(cases.map(c=>c.id));
+  cases.forEach(c=>{
+    if(isMonthlyFeeIncluded(c, ym)) buckets.monthly += c.monthlyFee || 0;
+    const items = state.entries[key(c.id, ym)] || [];
+    items.forEach(it=>{ buckets[bucketOf(it.category)] += it.amount; });
+  });
+  state.adhocBills.forEach(b=>{
+    if(!caseIds.has(b.caseId)) return;
+    if(!b.billDate || b.billDate.slice(0,7) !== ym) return;
+    (b.items||[]).forEach(it=>{
+      if(it.category === 'monthly'){ buckets.monthly += it.amount; return; }
+      buckets[bucketOf(it.category)] += it.amount;
+    });
+  });
+  return buckets;
+}
+
 function renderOverview(){
   const body = document.getElementById('overview-body');
   if(state.cases.length === 0){
@@ -3278,20 +3380,34 @@ function renderOverview(){
       </div>`;
   }
 
-  // แยกตามประเภทบิล (บิลรายเดือน vs บิลพิเศษ)
-  const typeTotal = cur.monthlyTotal + cur.adhocTotal;
-  const monthlyPct = typeTotal > 0 ? Math.round((cur.monthlyTotal / typeTotal) * 100) : 0;
+  // แยกตามประเภทค่าใช้จ่าย — ค่าบริการรายเดือน / ค่าเวชภัณฑ์ / ค่าบริการพาหาหมอ / ค่ากายภาพบำบัด / ค่าบริการอื่นๆ
+  const cat = computeCategoryBreakdown(cases, ym);
+  const catList = [
+    { label:'ค่าบริการรายเดือน', color:'var(--pine)',      amt: cat.monthly },
+    { label:'ค่าเวชภัณฑ์',       color:'var(--gold)',       amt: cat.medicine },
+    { label:'ค่าบริการพาหาหมอ',  color:'#2E6B9E',           amt: cat.escort },
+    { label:'ค่ากายภาพบำบัด',    color:'#7A5C8A',           amt: cat.physio },
+    { label:'ค่าบริการอื่นๆ',     color:'var(--ink-faint)',  amt: cat.other },
+  ];
+  const catTotal = catList.reduce((s,x)=>s+x.amt,0);
   const typeCard = `
     <div class="card">
-      <h3>แยกตามประเภทบิล</h3>
+      <h3>แยกตามประเภทค่าใช้จ่าย</h3>
       <p class="ov-desc">สัดส่วนรายรับเดือน ${thaiMonthYearLabel(ym)}</p>
-      ${typeTotal === 0 ? '<div class="empty" style="padding:10px 0;">ไม่มีรายรับในเดือนนี้</div>' : `
-      <div style="display:flex;align-items:center;gap:20px;">
-        <div class="ov-donut" style="background:conic-gradient(var(--pine) 0% ${monthlyPct}%, var(--gold) ${monthlyPct}% 100%);"></div>
-        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;">
-          <span><span class="ov-dot" style="background:var(--pine);"></span>บิลรายเดือน (ค่าบริการ+รายการอื่นๆ) — ${thb(cur.monthlyTotal)} (${monthlyPct}%)</span>
-          <span><span class="ov-dot" style="background:var(--gold);"></span>บิลพิเศษ — ${thb(cur.adhocTotal)} (${100-monthlyPct}%)</span>
-        </div>
+      ${catTotal === 0 ? '<div class="empty" style="padding:10px 0;">ไม่มีรายรับในเดือนนี้</div>' : `
+      <div class="ov-cat-bar">
+        ${catList.filter(x=>x.amt>0).map(x=>`<div style="width:${(x.amt/catTotal*100).toFixed(2)}%;background:${x.color};"></div>`).join('')}
+      </div>
+      <div style="display:flex;flex-direction:column;">
+        ${catList.map(x=>{
+          const pct = catTotal > 0 ? Math.round(x.amt/catTotal*100) : 0;
+          return `<div class="ov-cat-row">
+            <span class="ov-dot" style="background:${x.color};"></span>
+            <span class="ov-cat-label">${x.label}</span>
+            <span class="ov-cat-pct">${pct}%</span>
+            <span class="ov-cat-amt">${thb(x.amt)}</span>
+          </div>`;
+        }).join('')}
       </div>`}
     </div>`;
 
